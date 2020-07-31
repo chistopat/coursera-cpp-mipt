@@ -93,87 +93,55 @@ private:
     int fail_count = 0;
 };
 
-bool IsPalindrom(const string& s) {
-    return std::equal(s.begin(), s.begin() + s.size()/2, s.rbegin());
+//ToDo: Comment Class before send
+
+//class Rational {
+//public:
+//    Rational();
+//    Rational(int numerator, int denominator);
+//
+//    int Numerator() const;
+//    int Denominator() const;
+//};
+
+void TestSimple() {
+    const Rational r(3, 10);
+    Assert(!(r.Numerator() != 3 || r.Denominator() != 10), "Rational(3, 10) != 3/10");
 }
 
-void TestEmpty() {
-    Assert(IsPalindrom(""), "");
+void TestGDC() {
+    const Rational r(8, 12);
+    Assert(!(r.Numerator() != 2 || r.Denominator() != 3), "Rational(8, 12) != 2/3");
 }
 
-void TestSpace() {
-    Assert(IsPalindrom(" "), " ");
+void TestNegativeNumerator() {
+    const Rational r(-4, 6);
+    Assert(!(r.Numerator() != -2 || r.Denominator() != 3), "Rational(-4, 6) != -2/3");
 }
 
-void TestOdd() {
-    Assert(IsPalindrom("amama"), "amama");
+void TestNegativeDenominator() {
+    const Rational r(4, -6);
+    Assert(!(r.Numerator() != -2 || r.Denominator() != 3), "Rational(-4, 6) != -2/3");
 }
 
-void TestEven() {
-    Assert(IsPalindrom("amma"), "amma");
+void TestZeroNumerator() {
+    const Rational r(0, 15);
+    Assert(!(r.Numerator() != 0 || r.Denominator() != 1), "Rational(0, 15) != 0/1");
 }
 
-void TestSpaces() {
-    Assert(!IsPalindrom(" amma"), " amma");
-    Assert(!IsPalindrom("amma "), "amma ");
-    Assert(!IsPalindrom("amma  "), "amma  ");
-    Assert(!IsPalindrom(" amma  "), " amma  ");
-    Assert(!IsPalindrom("  amma "), "  amma ");
-    Assert(IsPalindrom(" amma "), " amma ");
-    Assert(IsPalindrom("  amma  "), "  amma  ");
-    Assert(IsPalindrom("   amma   "), "   amma   ");
-
-
+void TestDefaultConstructor() {
+    Rational r;
+    Assert(!(r.Numerator() != 0 || r.Denominator() != 1), "Rational() != 0/1");
 }
-
-
-void TestEndl() {
-    Assert(!IsPalindrom("amma\n"), "amma n");
-}
-
-void TestTab() {
-    Assert(!IsPalindrom("amma\t"), "amma t");
-}
-
-void TestR() {
-    Assert(!IsPalindrom("amma\r"), "amma r");
-}
-
-void TestLong() {
-    Assert(!IsPalindrom("aaaaaaaaaaaaaaazdfaaaaaaaaaaaaaaa"), "aaaaaaaaaaaaaaazdfaaaaaaaaaaaaaaa");
-    Assert(!IsPalindrom("baobab"), "baobab");
-}
-
-void TestCaps() {
-    Assert(IsPalindrom("AMMA"), "AMMA");
-    Assert(IsPalindrom("aMMa"), "aMMa");
-    Assert(IsPalindrom("AmmA"), "AmmA");
-    Assert(!IsPalindrom("aMMA"), "aMMA");
-    Assert(!IsPalindrom("AMMa"), "AMMa");
-}
-
-
-void TestSymbols() {
-    Assert(!IsPalindrom("±!@#$%^&*()_+{}:'?><,./`~'"), "symbols");
-    Assert(IsPalindrom("!@#$%^&*()_+{}:'?><,./`~''~`/.,<>?':}{+_)(*&^%$#@!"), "symbols");
-}
-
 
 int main() {
     TestRunner runner;
-    runner.RunTest(TestEmpty, "TestEmpty");
-    runner.RunTest(TestSpace, "TestSpace");
-    runner.RunTest(TestOdd, "TestOdd");
-    runner.RunTest(TestEven, "TestEven");
-    runner.RunTest(TestSpaces, "TestSpaceFirst");
-    runner.RunTest(TestEndl, "TestEndl");
-    runner.RunTest(TestR, "TestR");
-    runner.RunTest(TestTab, "TestTab");
-    runner.RunTest(TestLong, "TestLong");
-    runner.RunTest(TestCaps, "TestCaps");
-    runner.RunTest(TestSymbols, "TestSymbols");
-
-
+    runner.RunTest(TestSimple, "TestSimple");
+    runner.RunTest(TestGDC, "TestGDC");
+    runner.RunTest(TestNegativeNumerator, "TestNegativeNumerator");
+    runner.RunTest(TestNegativeDenominator, "TestNegativeDenominator");
+    runner.RunTest(TestZeroNumerator, "TestZeroNumerator");
+    runner.RunTest(TestDefaultConstructor, "TestDefaultConstructor");
     // добавьте сюда свои тесты
     return 0;
 }
