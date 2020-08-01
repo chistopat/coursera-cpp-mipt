@@ -53,7 +53,7 @@ template <class T, class U>
 void AssertEqual(const T &t, const U &u, const std::string &hint) {
   if (t != u) {
     std::ostringstream os;
-    os << "Assertion failed: " << t << " != " << u << " hint: " << hint;
+    os << "Assertion failed: \"" << t << "\" != \"" << u << "\" hint: " << hint;
     throw std::runtime_error(os.str());
   }
 }
@@ -63,7 +63,7 @@ void AssertEqual(const std::vector<T> &t, const std::vector<U> &u,
                  const std::string &hint) {
   if (!std::equal(t.begin(), t.end(), u.begin())) {
     std::ostringstream os;
-    os << "Assertion failed: " << t << " != " << u << " hint: " << hint;
+      os << "Assertion failed: \"" << t << "\" != \"" << u << "\" hint: " << hint;
     throw std::runtime_error(os.str());
   }
 }
