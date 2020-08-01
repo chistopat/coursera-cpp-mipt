@@ -2,9 +2,7 @@
 
 #include "tests.h"
 
-using namespace std;
-
 int main() {
-    TestAll();
-    return 0;
+  TestAll();
+  return 0;
 }

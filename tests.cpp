@@ -1,6 +1,6 @@
 #include "tests.h"
 
 void TestAll() {
-    TestRunner tr;
-    tr.RunTest([](){cout << "OMFG" << endl;}, "lambda");
+  TestRunner tr;
+  tr.RunTest([]() { std::cout << "OMFG" << std::endl; }, "lambda");
 }
