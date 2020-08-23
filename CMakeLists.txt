@@ -3,4 +3,4 @@ project(yellow)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable(yellow main.cpp test_runner.h test_runner.cpp tests.h tests.cpp)
+add_executable(yellow main.cpp test_runner.h condition_parser_test.cpp condition_parser.cpp condition_parser.h token.cpp token.h node.cpp node.h date.cpp date.h database.cpp database.h test_db.h)
