@@ -9,6 +9,7 @@ using namespace std;
 class Date {
 public:
 //    Date();
+    Date(vector<int> v);
     Date(int year, int month, int day);
     int GetYear() const;
     int GetMonth() const;
@@ -18,6 +19,7 @@ private:
     int _year;
     int _month;
     int _day;
+    void DateValidate();
 };
 
 Date ParseDate(std::istream& is);

@@ -238,7 +238,7 @@ void TestsMyCustom()
         db.Print(out);
         AssertEqual("2019-12-01 a\n2019-12-01 b\n2019-12-02 c\n2019-12-02 d\n2019-12-03 e\n", out.str(), "Order of insertion");
     }
-
+//
     {
         Database db;
         istringstream ss("    a");
@@ -248,7 +248,7 @@ void TestsMyCustom()
         db.Print(out);
         AssertEqual("2019-12-01 a\n", out.str(), "My test 20");
     }
-
+//
     {
         Database db;
         db.Add({2019, 12, 1}, "a");

@@ -6,28 +6,66 @@ std::ostream& operator<<(std::ostream& os, const DbEntry& entry) {
 }
 
 void Database::Add(const Date &date, const string &event) {
-    _db[date].insert(Event({event, ++_entryOrderCounter}));
+    if(!_UniqueData.empty() and _UniqueData.count(date) > 0) {
+        if(_UniqueData.at(date).count(event) > 0) {
+            return void();
+        }
+    }
+    _UniqueData[date].insert(event);
+    _OrderedData[date].push_back(event);
 }
 
 void Database::Print(ostream &os) const {
-    std::set<std::string> tempUnique;
-    for(auto &[date, events] : _db) {
+    for(auto &[date, events] : _OrderedData) {
         for(auto &event : events) {
-            if(tempUnique.count(event.event) == 0) {
-                os << date << " " << event.event << std::endl;
-                tempUnique.insert(event.event);
+                os << date << " " << event << std::endl;
             }
         }
     }
-}
-
 
 DbEntry Database::Last(const Date &lastDate) const {
-    return DbEntry({{1,1,1}, ""});
+    auto it = _OrderedData.upper_bound(lastDate);
+    if (it == _OrderedData.begin()) {
+        throw std::invalid_argument("");
+    }
+    auto date = (--it)->first;
+    auto event = *_OrderedData.at(date).rbegin();
+    return DbEntry({date.ToVector(), event});
+
+
 }
 
-bool operator<(Event lhs, Event rhs) {
-    return std::tie(lhs.order, lhs.event)
-            < std::tie(rhs.order, rhs.event);
+std::list<DbEntry> Database::FindIf(TPred cmp) const {
+    std::list<DbEntry> found;
+    for(auto &[date, events] : _OrderedData) {
+        for(auto &event : events) {
+            bool match = cmp(date, event);
+            if(match) {
+                found.push_back(DbEntry{date.ToVector(), event});
+            }
+        }
+    }
+    return found;
 }
+
+int Database::RemoveIf(TPred cmp) {
+    auto RemoveList = FindIf(cmp);
+    int removeCounter = RemoveList.size();
+    for (auto &entry : RemoveList) {
+        auto currentDate = Date(entry.date);
+        auto& eventsFromUniq = _UniqueData.at(currentDate);
+        eventsFromUniq.erase(entry.event);
+        if(eventsFromUniq.empty()) {
+            _UniqueData.erase(currentDate);
+        }
+
+        auto& eventsFromOrder = _OrderedData.at(currentDate);
+        eventsFromOrder.remove_if([entry](std::string e){return e==entry.event;});
+        if(eventsFromOrder.empty()) {
+            _OrderedData.erase(currentDate);
+        }
+    }
+    return removeCounter;
+}
+
 

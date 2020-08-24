@@ -5,12 +5,11 @@
 #include "vector"
 #include "map"
 #include "set"
+#include "list"
+#include "stdexcept"
 
-struct Event {
-    std::string event;
-    size_t order;
-};
-
+typedef std::function<bool(const Date& date,
+                           const string& event)> TPred;
 
 struct DbEntry {
     vector<int> date;
@@ -21,33 +20,13 @@ class Database {
 public:
     void Add(const Date& date, const std::string& event);
     void Print(std::ostream& os) const;
-
-    template<typename TPred>
-    int RemoveIf(TPred cmp) {
-        size_t rmCount = 0u;
-        for(auto &[date, events] : _db) {
-            for(auto &event : events) {
-                if(cmp(date, event)){
-                    ++rmCount;
-                    events.erase(event);
-                    if (events.empty()) {
-                        _db.erase(date);
-                    }
-                }
-            }
-        }
-        return 0;
-    }
-    template<typename TPred>
-    std::vector<DbEntry> FindIf(TPred cmp) const {
-
-    };
+    int RemoveIf(TPred cmp);
+    std::list<DbEntry> FindIf(TPred cmp) const;
     DbEntry Last(const Date& lastDate) const;
 
 private:
-    size_t _entryOrderCounter = 0u;
-    map<Date, std::set<Event>> _db;
+    map<Date, std::set<std::string>> _UniqueData;
+    map<Date, std::list<std::string>> _OrderedData;
 };
 
 std::ostream& operator<<(std::ostream& os, const DbEntry& entry);
-bool operator<(Event lhs, Event rhs);

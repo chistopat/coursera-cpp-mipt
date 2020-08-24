@@ -2,14 +2,7 @@
 
 Date::Date(int year, int month, int day)
         : _year(year), _month(month), _day(day) {
-    if (month < 1 or month > 12) {
-        throw std::invalid_argument("Month value is invalid: "
-                                    + std::to_string(month));
-    }
-    if (day < 1 or day > 31) {
-        throw std::invalid_argument("Day value is invalid: "
-                                    + std::to_string(day));
-    }
+    DateValidate();
 };
 
 
@@ -30,6 +23,22 @@ int Date::GetYear() const {
 
 std::vector<int> Date::ToVector() const {
     return {_year, _month, _day};
+}
+
+Date::Date(vector<int> v)
+    : _year(v[0]), _month(v[1]), _day(v[2]){
+    DateValidate();
+}
+
+void Date::DateValidate() {
+    if (_month < 1 or _month > 12) {
+        throw std::invalid_argument("Month value is invalid: "
+                                    + std::to_string(_month));
+    }
+    if (_day < 1 or _day > 31) {
+        throw std::invalid_argument("Day value is invalid: "
+                                    + std::to_string(_day));
+    }
 }
 
 
