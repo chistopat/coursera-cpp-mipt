@@ -1,8 +1,10 @@
 #include <iostream>
 #include "deque"
 #include "map"
+#include "sstream"
 
 using namespace std;
+
 
 enum class OperandType {
     Addition,
@@ -16,48 +18,70 @@ enum class ParensType{
     RRoundParen
 };
 
-map<ParensType, const string> parensMap = {
+typedef size_t TPriority;
+
+map<ParensType, string> parensMap = {
         {ParensType::LRoundParen, "("},
         {ParensType::RRoundParen, ")"}
 };
 
-map<const string, OperandType> operandsMap = {
-        {"+", OperandType::Addition},
-        {"-", OperandType::Subtraction},
-        {"*", OperandType::Multiplication},
-        {"/", OperandType::Division, },
+map<string, pair<OperandType, TPriority>> operandsMap = {
+        {"+", make_pair(OperandType::Addition, 1)},
+        {"-", make_pair(OperandType::Subtraction, 1)},
+        {"*", make_pair(OperandType::Multiplication, 2)},
+        {"/", make_pair(OperandType::Division, 2)},
 };
 
-void MakeRoundParens(deque<string>& dq) {
-    dq.push_front(parensMap[ParensType::LRoundParen]);
-    dq.push_back(parensMap[ParensType::RRoundParen]);
-}
-
-void AddOperand(deque<string>& dq, string& operandStr, int value) {
-    if (operandsMap.count(operandStr) == 1) {
-        operandStr = " " + operandStr + " ";
-        dq.push_back(operandStr);
-        dq.push_back(to_string(value));
+class Expression {
+public:
+    explicit Expression(int init_value) : _last_priority(0) {
+        _dq.push_back(to_string(init_value));
     }
-}
+    void AddOperand(string& operandStr, int value) {
+        if (operandsMap.count(operandStr) == 0) {
+            return void();
+        }
+        auto [operand, priority] = operandsMap[operandStr];
+        if (priority > _last_priority && _last_priority != 0) {
+            MakeRoundParens();
+        }
+        operandStr = " " + operandStr + " ";
+        _dq.push_back(operandStr);
+        _dq.push_back(to_string(value));
+        _last_priority = priority;
+
+    }
+    [[nodiscard]] string ToSting() const {
+        stringstream stream;
+        for (const auto& item : _dq) {
+            stream << item;
+        }
+        return stream.str();
+    }
+private:
+    deque<string> _dq;
+    TPriority _last_priority;
+    void MakeRoundParens() {
+        _dq.push_front(parensMap[ParensType::LRoundParen]);
+        _dq.push_back(parensMap[ParensType::RRoundParen]);
+    }
+};
+
+
+
+
 
 int main() {
-    int x;
+    int value;
     size_t n;
-    cin >> x >> n;
-    deque<string> dq;
-    dq.push_back(to_string(x));
+    cin >> value >> n;
+    Expression expression(value);
     while(n--) {
         string operand;
-        int value;
         cin >> operand >> value;
-        MakeRoundParens(dq);
-        AddOperand(dq, operand, value);
+        expression.AddOperand(operand, value);
     }
-    for(const auto& item: dq) {
-        cout<<item;
-    }
-    cout << endl;
+    cout << expression.ToSting()<< endl;
     return 0;
 
 }
