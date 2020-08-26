@@ -1,62 +1,63 @@
 #include <iostream>
-#include "test_runner.h"
-#include "vector"
-#include "string"
-#include "sstream"
-#include "forward_list"
-#include "algorithm"
-#include <numeric>
-#include <vector>
-#include <iostream>
-#include <iterator>
-#include <functional>
+#include "deque"
+#include "map"
 
 using namespace std;
 
+enum class OperandType {
+    Addition,
+    Subtraction,
+    Multiplication,
+    Division,
+};
 
-std::ostream& operator<<(std::ostream& os, std::vector<int> v) {
-    os << "[";
-    bool first = true;
-    for (const auto &i : v) {
-        if (!first) {
-            os << ", ";
-        }
-        first = false;
-        os << i;
-    }
-    os << "]";
-    return os;
+enum class ParensType{
+    LRoundParen,
+    RRoundParen
+};
+
+map<ParensType, const string> parensMap = {
+        {ParensType::LRoundParen, "("},
+        {ParensType::RRoundParen, ")"}
+};
+
+map<const string, OperandType> operandsMap = {
+        {"+", OperandType::Addition},
+        {"-", OperandType::Subtraction},
+        {"*", OperandType::Multiplication},
+        {"/", OperandType::Division, },
+};
+
+void MakeRoundParens(deque<string>& dq) {
+    dq.push_front(parensMap[ParensType::LRoundParen]);
+    dq.push_back(parensMap[ParensType::RRoundParen]);
 }
 
-template <typename RandomIt>
-void MergeSort(RandomIt range_begin, RandomIt range_end) {
-    //если диапазон содержит только один элемент - выходим
-    if(range_end - range_begin < 2) {
-        return;
+void AddOperand(deque<string>& dq, string& operandStr, int value) {
+    if (operandsMap.count(operandStr) == 1) {
+        operandStr = " " + operandStr + " ";
+        dq.push_back(operandStr);
+        dq.push_back(to_string(value));
     }
-    vector<typename RandomIt::value_type> elements(range_begin, range_end);
-    auto border = distance(range_begin, range_end) / 3;
-    auto begin = elements.begin();
-    auto m1 = elements.begin() + border;
-    auto m2 = elements.begin() + border + border;
-    auto end = elements.end();
-    MergeSort(begin, m1);
-    MergeSort(m1, m2);
-    MergeSort(m2, end);
-    vector<typename RandomIt::value_type> temp;
-    merge(begin, m1, m1, m2, back_inserter(temp));
-    merge(temp.begin(), temp.end(), m2, end, range_begin);
-
 }
-
-
 
 int main() {
-    vector<int> v = {6, 4, 7, 6, 4, 4, 0, 1, 9};
-    MergeSort(begin(v), end(v));
-    for (int x : v) {
-        cout << x << " ";
+    int x;
+    size_t n;
+    cin >> x >> n;
+    deque<string> dq;
+    dq.push_back(to_string(x));
+    while(n--) {
+        string operand;
+        int value;
+        cin >> operand >> value;
+        MakeRoundParens(dq);
+        AddOperand(dq, operand, value);
+    }
+    for(const auto& item: dq) {
+        cout<<item;
     }
     cout << endl;
     return 0;
+
 }
