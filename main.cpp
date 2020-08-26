@@ -35,16 +35,24 @@ void MergeSort(RandomIt range_begin, RandomIt range_end) {
         return;
     }
     vector<typename RandomIt::value_type> elements(range_begin, range_end);
-    auto border = distance(range_begin, range_end) / 2;
-    MergeSort(elements.begin(), elements.begin()+border);
-    MergeSort(elements.begin()+border, elements.end());
-    merge(elements.begin(), elements.begin()+border, elements.begin()+border, elements.end(), range_begin);
+    auto border = distance(range_begin, range_end) / 3;
+    auto begin = elements.begin();
+    auto m1 = elements.begin() + border;
+    auto m2 = elements.begin() + border + border;
+    auto end = elements.end();
+    MergeSort(begin, m1);
+    MergeSort(m1, m2);
+    MergeSort(m2, end);
+    vector<typename RandomIt::value_type> temp;
+    merge(begin, m1, m1, m2, back_inserter(temp));
+    merge(temp.begin(), temp.end(), m2, end, range_begin);
+
 }
 
 
 
 int main() {
-    vector<int> v = {6, 4, 7, 6, 4, 4, 0, 1};
+    vector<int> v = {6, 4, 7, 6, 4, 4, 0, 1, 9};
     MergeSort(begin(v), end(v));
     for (int x : v) {
         cout << x << " ";
