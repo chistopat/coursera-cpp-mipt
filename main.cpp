@@ -1,71 +1,76 @@
 #include <string>
 #include <vector>
 #include "deque"
+#include "test_runner.h"
+#include "deque_test.h"
+#include "deque.h"
 
 using namespace std;
 
-
-template<typename T>
-class Deque {
-public:
-    Deque(size_t count=0) : _size(count) {;
-    }
-    bool Empty() const{
-        return lhs.empty() and rhs.empty();
-    }
-
-    size_t Size() const {
-        return lhs.size() + rhs.size();
-    }
-    T& operator[](size_t index) {
-
-    }
-    const T& operator[](size_t index) const{
-        CheckIndex(index);
-
-    }
-    T& At(size_t index) {
-        CheckIndex(index);
-
-    }
-    const T& At(size_t index) const;
-    T& Front() {
-        return *lhs.rbegin();
-    }
-    const T& Front() const {
-        const auto result =  *lhs.rbegin();
-        return result;
-    }
-    T& Back() {
-        return *rhs.rbegin();
-    }
-    const T& Back() const {
-        const auto result = *rhs.rbegin();
-        return result;
-    }
-    void PushFront(T arg) {
-        _size++;
-        lhs.push_back(arg);
-    }
-    void PushBack(T arg){
-        _size++;
-        rhs.push_back(arg);
-    }
-
-private:
-    size_t _size;
-    vector<T> rhs;
-    vector<T> lhs;
-
-    void CheckIndex(size_t index) const{
-        if (index > _size-1) {
-            throw range_error("index out of range");
-        }
-    }
-};
+//void Test() {
+//  {
+//    Deque<int> d;
+//    d.Back();
+//    d.Front();
+//    d.Size();
+//  }
+//
+//  {
+//    Deque<int> d;
+//    d.PushBack(1);
+//    d.PushBack(2);
+//    d.PushBack(3);
+//    d.PushFront(5);
+//    d.PushFront(7);
+//    d.PushFront(6);
+//    auto f = d.At(0);
+//    auto s = d.At(3);
+//    ASSERT_EQUAL(f, 6);
+//    ASSERT_EQUAL(s, 1);
+//  }
+//
+//  {
+//    Deque<int> d;
+//    d.PushBack(1);
+//    d.PushBack(2);
+//    d.PushBack(3);
+//    d.Back() = 4;
+//    ASSERT_EQUAL(d.Back(), 4);
+//  }
+//
+//  {
+//    Deque<int> d;
+//    d.PushBack(1);
+//    d.PushBack(2);
+//    d.PushBack(3);
+//    ASSERT_EQUAL(d.Back(), 3);
+//  }
+//
+//  {
+//    Deque<int> d;
+//    ASSERT_EQUAL(d.Empty(), true);
+//    d.PushBack(1);
+//    ASSERT_EQUAL(d.Empty(), false);
+//    d.PushFront(2);
+//    ASSERT_EQUAL(d.Empty(), false);
+//  }
+//
+//}
 
 
 int main() {
-    deque<int> d ;
-    d[1];
+  TestRunner tr;
+  Deque<int> d;
+  d.PushBack(1);
+  d.PushBack(2);
+  d.PushBack(3);
+  d.PushBack(4);
+
+  cout << d.Front();
+  cout << d[0];
+  cout << d.At(0);
+
+//  RUN_TEST(tr, Test);
 }
+
+
