@@ -6,41 +6,28 @@
 #include "algorithm"
 #include "set"
 #include "test_runner.h"
+#include "profile.h"
 
 typedef std::string THotelName;
 typedef int TClientId;
 
 using namespace std;
 
-struct Accomodation {
-  int64_t time;
-  int user_id;
-  int rooms_count;
-};
-
-struct Hotel {
-  deque<Accomodation> accommodations;
-  int booked_rooms_count;
-  set<TClientId> clients;
-};
-
 class BookingManager {
 public:
   void Book(string hotel_name, int64_t time, int user_id, int rooms_count) {
-    Accomodation accomodation({time, user_id, rooms_count});
-    _CheckOut(time);
-    _CheckIn(accomodation, hotel_name);
-
+    Accomodation accomodation({time, user_id, rooms_count, hotel_name});
+    CheckOutHotel(time);
+    CheckInHotel(accomodation, hotel_name);
   }
+
   const int Rooms(string hotel_name) const {
-    int count = 0;
     if (_database.count(hotel_name) == 0) {
       return 0;
     }
     return _database.at(hotel_name).booked_rooms_count;
   }
   const int Clients(string hotel_name) const {
-    set<int> users;
     if (_database.count(hotel_name) == 0) {
       return 0;
     }
@@ -48,33 +35,39 @@ public:
   }
 
 private:
+  struct Accomodation {
+    int64_t time;
+    int user_id;
+    int rooms_count;
+    THotelName hotel_name;
+  };
+
+  struct Hotel {
+    int booked_rooms_count;
+    set<TClientId> clients;
+  };
+
   map<THotelName, Hotel> _database;
+  deque<Accomodation> _accommodations;
   const int dayDurationSeconds = 86400;
 
-  void _CheckIn(Accomodation accomodation, const string& hotel_name) {
-    _database[hotel_name].accommodations.emplace_back(accomodation);
+  void CheckInHotel(Accomodation accomodation, const string& hotel_name) {
+    _accommodations.push_front(accomodation);
     _database[hotel_name].clients.insert(accomodation.user_id);
     _database[hotel_name].booked_rooms_count += accomodation.rooms_count;
   }
 
-  void _CheckOut(int64_t time) {
-    auto Predicate = [&](Accomodation entry){
+  void CheckOutHotel(int64_t time) {
+    auto Comp = [&](Accomodation entry){
       return (time - entry.time) < dayDurationSeconds;
     };
-    //iterate by hotels
-    for (auto& [hotel_name, hotel] : _database) {
-      //move all expired accomodations to tail
-      auto firstExpiredIt = std::find_if(begin(hotel.accommodations),
-                                      end(hotel.accommodations),
-                                      Predicate);
-      for (auto it = hotel.accommodations.begin(); it != firstExpiredIt; it++) {
-        hotel.booked_rooms_count -= it->rooms_count;
-        hotel.clients.erase(it->user_id);
-      }
-      hotel.accommodations.erase( begin(hotel.accommodations), firstExpiredIt);
+    auto firstExpiredIt = std::find_if(_accommodations.rbegin(), _accommodations.rend(), Comp);
+    for (auto it = _accommodations.rbegin(); it != firstExpiredIt; it++) {
+      _database[it->hotel_name].booked_rooms_count -= it->rooms_count;
+      _database[it->hotel_name].clients.erase(it->user_id);
+      _accommodations.pop_back();
     }
   }
-
 };
 
 void Test() {
@@ -103,14 +96,15 @@ enum class CommandTypes {
   Rooms
 };
 
-map<string, CommandTypes> commands_map{
-    {"BOOK", CommandTypes::Book},
-    {"CLIENTS", CommandTypes::Clients},
-    {"ROOMS", CommandTypes::Rooms}
-};
-
 int main() {
   TestAll();
+
+  map<string, CommandTypes> commands_map{
+      {"BOOK", CommandTypes::Book},
+      {"CLIENTS", CommandTypes::Clients},
+      {"ROOMS", CommandTypes::Rooms}
+  };
+
   ios::sync_with_stdio(false);
   cin.tie(nullptr);
   int n = 0;
