@@ -3,4 +3,5 @@ project(yellow)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable(yellow main.cpp test_runner.h profile.h)
+add_executable(yellow main.cpp test_runner.h profile.h circle_list.cpp)
+add_executable(circle circle_list.cpp)

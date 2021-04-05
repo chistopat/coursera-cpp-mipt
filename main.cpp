@@ -14,6 +14,7 @@ void MakeJosephusPermutation(RandomIt first, RandomIt last, uint32_t step_size) 
     std::list<typename RandomIt::value_type> pool;
     move(first, last, back_inserter(pool));
     uint32_t current = 0;
+    uint32_t previous = 0;
     auto it = pool.begin();
     while(true) {
         *(first++) = std::move(*it);
@@ -22,9 +23,6 @@ void MakeJosephusPermutation(RandomIt first, RandomIt last, uint32_t step_size) 
             break;
         }
         current = (current + step_size - 1) % pool.size();
-        do {
-            it = next(it) == pool.end() ? pool.begin() : next(it);
-        } while(current--);
     }
 }
 vector<int> MakeTestVector() {
