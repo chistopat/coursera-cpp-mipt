@@ -1,6 +1,7 @@
 #include "search_server.h"
 #include "parse.h"
 #include "test_runner.h"
+#include "profile.h"
 
 #include <algorithm>
 #include <iterator>
@@ -32,6 +33,28 @@ void TestFunctionality(
   for (size_t i = 0; i < lines.size(); ++i) {
     ASSERT_EQUAL(lines[i], expected[i]);
   }
+}
+
+void TestFunctionalityWithoutAssert(
+    const vector<string>& docs,
+    const vector<string>& queries
+) {
+  istringstream docs_input(Join('\n', docs));
+  istringstream queries_input(Join('\n', queries));
+
+  SearchServer srv;
+  {
+    LOG_DURATION("Indexing");
+    srv.UpdateDocumentBase(docs_input);
+  }
+
+  ostringstream queries_output;
+  {
+    LOG_DURATION("Searching");
+    srv.AddQueriesStream(queries_input, queries_output);
+  }
+
+  const string result = queries_output.str();
 }
 
 void TestSerpFormat() {
@@ -200,6 +223,35 @@ void TestBasicSearch() {
   TestFunctionality(docs, queries, expected);
 }
 
+std::string GenerateWordsLine(int len, const std::string& word) {
+  std::ostringstream os;
+  while(len--) {
+    os << word << " ";
+  }
+  return os.str();
+}
+
+std::vector<std::string> GenerateInputStream (int lines_count, int words_count,
+                                             const std::string& word) {
+  std::vector<std::string> result(lines_count);
+  for (auto& item : result) {
+    item = GenerateWordsLine(words_count, word);
+  }
+  return result;
+}
+
+
+void TestServerByLoad() {
+  LOG_DURATION("TestServerByLoadGeneration");
+  const std::string mock = "aaaaa";
+  auto input = GenerateInputStream(1000, 1000, mock);
+  auto queries = GenerateInputStream(1, 2, mock);
+  {
+    LOG_DURATION("TestServerByLoad");
+    TestFunctionalityWithoutAssert(input, queries);
+  }
+}
+
 int main() {
   TestRunner tr;
   RUN_TEST(tr, TestSerpFormat);
@@ -207,4 +259,5 @@ int main() {
   RUN_TEST(tr, TestHitcount);
   RUN_TEST(tr, TestRanking);
   RUN_TEST(tr, TestBasicSearch);
+  RUN_TEST(tr, TestServerByLoad);
 }
