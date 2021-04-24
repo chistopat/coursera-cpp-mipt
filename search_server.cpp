@@ -1,5 +1,6 @@
 #include "search_server.h"
 #include "iterator_range.h"
+#include "parse.h"
 
 #include <algorithm>
 #include <iterator>
@@ -16,7 +17,7 @@ SearchServer::SearchServer(istream& document_input) {
 }
 
 void SearchServer::UpdateDocumentBase(istream& document_input) {
-  InvertedIndex new_index;
+  QuickIndex new_index;
 
   for (string current_document; getline(document_input, current_document); ) {
     new_index.Add(move(current_document));
@@ -31,15 +32,16 @@ void SearchServer::AddQueriesStream(
   for (string current_query; getline(query_input, current_query); ) {
     const auto words = SplitIntoWords(current_query);
 
-    map<size_t, size_t> docid_count;
+    QuickIndex::DocumentFrequency docid_count;
     for (const auto& word : words) {
-      for (const size_t docid : index.Lookup(word)) {
-        docid_count[docid]++;
-      }
+        auto document_frequency = index.Lookup(word);
+        if (!document_frequency.docid_to_frequency.empty()) {
+          docid_count += document_frequency;
+        }
     }
 
     vector<pair<size_t, size_t>> search_results(
-      docid_count.begin(), docid_count.end()
+      docid_count.docid_to_frequency.begin(), docid_count.docid_to_frequency.end()
     );
     sort(
       begin(search_results),
@@ -49,7 +51,8 @@ void SearchServer::AddQueriesStream(
         auto lhs_hit_count = lhs.second;
         int64_t rhs_docid = rhs.first;
         auto rhs_hit_count = rhs.second;
-        return make_pair(lhs_hit_count, -lhs_docid) > make_pair(rhs_hit_count, -rhs_docid);
+        return make_pair(lhs_hit_count, -lhs_docid)
+                 > make_pair(rhs_hit_count, -rhs_docid);
       }
     );
 
@@ -78,4 +81,18 @@ list<size_t> InvertedIndex::Lookup(const string& word) const {
   } else {
     return {};
   }
+}
+
+void QuickIndex::Add(const string& document) {
+  for (const auto& word : SplitIntoWords(document)) {
+    ++index_[word].docid_to_frequency[serial_];
+  }
+  ++serial_;
+}
+
+QuickIndex::DocumentFrequency QuickIndex::Lookup(const string& word) const {
+  if (index_.count(word)) {
+    return index_.at(word);
+  }
+  return {};
 }

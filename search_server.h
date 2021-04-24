@@ -23,6 +23,26 @@ private:
   vector<string> docs;
 };
 
+class QuickIndex {
+public:
+  struct DocumentFrequency {
+    std::map<std::size_t, size_t> docid_to_frequency;
+    DocumentFrequency& operator+=(const DocumentFrequency& other) {
+       for (auto [docid, freq] : other.docid_to_frequency) {
+         docid_to_frequency[docid] += freq;
+       }
+       return *this;
+    }
+  };
+public:
+  void Add(const string& document);
+  DocumentFrequency Lookup(const string& word) const;
+
+private:
+  map<string , DocumentFrequency> index_;
+  size_t serial_ = 0;
+};
+
 class SearchServer {
 public:
   SearchServer() = default;
@@ -31,5 +51,5 @@ public:
   void AddQueriesStream(istream& query_input, ostream& search_results_output);
 
 private:
-  InvertedIndex index;
+  QuickIndex index;
 };

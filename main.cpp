@@ -245,7 +245,7 @@ void TestServerByLoad() {
   LOG_DURATION("TestServerByLoadGeneration");
   const std::string mock = "aaaaa";
   auto input = GenerateInputStream(1000, 1000, mock);
-  auto queries = GenerateInputStream(1, 2, mock);
+  auto queries = GenerateInputStream(1000, 10, mock);
   {
     LOG_DURATION("TestServerByLoad");
     TestFunctionalityWithoutAssert(input, queries);
