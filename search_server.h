@@ -6,6 +6,7 @@
 #include <list>
 #include <vector>
 #include <map>
+#include <unordered_map>
 #include <string>
 using namespace std;
 
@@ -25,21 +26,11 @@ private:
 
 class QuickIndex {
 public:
-  struct DocumentFrequency {
-    std::map<std::size_t, size_t> docid_to_frequency;
-    DocumentFrequency& operator+=(const DocumentFrequency& other) {
-       for (auto [docid, freq] : other.docid_to_frequency) {
-         docid_to_frequency[docid] += freq;
-       }
-       return *this;
-    }
-  };
-public:
   void Add(const string& document);
-  DocumentFrequency Lookup(const string& word) const;
-
+  vector<std::pair<size_t,size_t>> Lookup(const string& word) const;
+  size_t GetDocumentsCount() const;
 private:
-  map<string , DocumentFrequency> index_;
+  unordered_map<string, vector<std::pair<size_t,size_t>>> index_;
   size_t serial_ = 0;
 };
 

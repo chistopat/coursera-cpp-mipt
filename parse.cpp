@@ -15,7 +15,7 @@ vector<string_view> SplitBy(string_view s, char sep) {
   while (!s.empty()) {
     size_t pos = s.find(sep);
     result.push_back(s.substr(0, pos));
-    s.remove_prefix(pos != s.npos ? pos + 1 : s.size());
+    s.remove_prefix(pos != string::npos ? pos + 1 : s.size());
   }
   return result;
 }

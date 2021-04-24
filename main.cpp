@@ -244,8 +244,8 @@ std::vector<std::string> GenerateInputStream (int lines_count, int words_count,
 void TestServerByLoad() {
   LOG_DURATION("TestServerByLoadGeneration");
   const std::string mock = "aaaaa";
-  auto input = GenerateInputStream(1000, 1000, mock);
-  auto queries = GenerateInputStream(1000, 10, mock);
+  auto input = GenerateInputStream(10000, 100, mock);
+  auto queries = GenerateInputStream(20000, 10, mock);
   {
     LOG_DURATION("TestServerByLoad");
     TestFunctionalityWithoutAssert(input, queries);

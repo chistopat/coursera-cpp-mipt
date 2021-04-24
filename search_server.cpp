@@ -1,6 +1,6 @@
 #include "search_server.h"
 #include "iterator_range.h"
-#include "parse.h"
+#include "profile.h"
 
 #include <algorithm>
 #include <iterator>
@@ -29,32 +29,37 @@ void SearchServer::UpdateDocumentBase(istream& document_input) {
 void SearchServer::AddQueriesStream(
   istream& query_input, ostream& search_results_output
 ) {
+
+  std::vector<size_t> search_results_single;
+  search_results_single.assign(index.GetDocumentsCount(), 0);
+  std:vector<pair<size_t, size_t>> search_results;
   for (string current_query; getline(query_input, current_query); ) {
     const auto words = SplitIntoWords(current_query);
 
-    QuickIndex::DocumentFrequency docid_count;
     for (const auto& word : words) {
-        auto document_frequency = index.Lookup(word);
-        if (!document_frequency.docid_to_frequency.empty()) {
-          docid_count += document_frequency;
-        }
+          for (auto& [docid, freq] : index.Lookup(word)) {
+            search_results_single[docid] += freq;
+          }
+    }
+    for (size_t i =0 ; i<search_results_single.size(); ++i) {
+      if (search_results_single[i] != 0) {
+        search_results.emplace_back(pair{i, search_results_single[i]});
+      }
     }
 
-    vector<pair<size_t, size_t>> search_results(
-      docid_count.docid_to_frequency.begin(), docid_count.docid_to_frequency.end()
-    );
-    sort(
-      begin(search_results),
-      end(search_results),
-      [](pair<size_t, size_t> lhs, pair<size_t, size_t> rhs) {
-        int64_t lhs_docid = lhs.first;
-        auto lhs_hit_count = lhs.second;
-        int64_t rhs_docid = rhs.first;
-        auto rhs_hit_count = rhs.second;
-        return make_pair(lhs_hit_count, -lhs_docid)
-                 > make_pair(rhs_hit_count, -rhs_docid);
-      }
-    );
+      partial_sort(
+        search_results.begin(),
+        Head(search_results, 5).end(),
+        search_results.end(),
+        [](pair<size_t, size_t> lhs, pair<size_t, size_t> rhs) {
+          int64_t lhs_docid = lhs.first;
+          auto lhs_hit_count = lhs.second;
+          int64_t rhs_docid = rhs.first;
+          auto rhs_hit_count = rhs.second;
+          return make_pair(lhs_hit_count, -lhs_docid)
+                   > make_pair(rhs_hit_count, -rhs_docid);
+        }
+      );
 
     search_results_output << current_query << ':';
     for (auto [docid, hitcount] : Head(search_results, 5)) {
@@ -63,6 +68,8 @@ void SearchServer::AddQueriesStream(
         << "hitcount: " << hitcount << '}';
     }
     search_results_output << endl;
+    search_results.clear();
+    search_results_single.assign(index.GetDocumentsCount(), 0);
   }
 }
 
@@ -85,14 +92,26 @@ list<size_t> InvertedIndex::Lookup(const string& word) const {
 
 void QuickIndex::Add(const string& document) {
   for (const auto& word : SplitIntoWords(document)) {
-    ++index_[word].docid_to_frequency[serial_];
+      if (index_.count(word)) {
+        if (index_.at(word).back().first == serial_) {
+          ++index_.at(word).back().second;
+        } else {
+          index_.at(word).push_back({serial_, 1});
+        }
+      } else {
+        index_[word].push_back({serial_, 1});
+      }
   }
   ++serial_;
 }
 
-QuickIndex::DocumentFrequency QuickIndex::Lookup(const string& word) const {
+vector<std::pair<size_t,size_t>> QuickIndex::Lookup(const string& word) const {
   if (index_.count(word)) {
     return index_.at(word);
   }
   return {};
+}
+
+size_t QuickIndex::GetDocumentsCount() const {
+    return serial_;
 }
