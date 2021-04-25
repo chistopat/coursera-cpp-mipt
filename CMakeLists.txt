@@ -4,4 +4,4 @@ project(yellow)
 set(CMAKE_CXX_STANDARD 17)
 
 #brown
-add_executable(hashtable common/test_runner.h common/profile.h brown/week1/hashtable/main.cpp)
+add_executable(hashtable  brown/week1/hashtable/test_runner.h brown/week1/hashtable/main.cpp)
