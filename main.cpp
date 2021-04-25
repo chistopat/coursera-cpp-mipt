@@ -21,12 +21,14 @@ void TestFunctionality(
 ) {
   istringstream docs_input(Join('\n', docs));
   istringstream queries_input(Join('\n', queries));
+  ostringstream queries_output;
+  {
 
   SearchServer srv;
   srv.UpdateDocumentBase(docs_input);
-  ostringstream queries_output;
   srv.AddQueriesStream(queries_input, queries_output);
 
+  }
   const string result = queries_output.str();
   const auto lines = SplitBy(Strip(result), '\n');
   ASSERT_EQUAL(lines.size(), expected.size());
@@ -245,12 +247,30 @@ void TestServerByLoad() {
   LOG_DURATION("TestServerByLoadGeneration");
   const std::string mock = "aaaaa";
   auto input = GenerateInputStream(10000, 100, mock);
-  auto queries = GenerateInputStream(20000, 10, mock);
+  auto queries = GenerateInputStream(1000, 10, mock);
   {
     LOG_DURATION("TestServerByLoad");
     TestFunctionalityWithoutAssert(input, queries);
   }
 }
+
+//void TestSearchServer(vector<pair<istream, ostream*>> streams) {
+//  // IteratorRange — шаблон из задачи Paginator
+//  // random_time() — функция, которая возвращает случайный
+//  // промежуток времени
+//
+//  LOG_DURATION("Total");
+//  SearchServer srv(streams.front().first);
+//  for (auto& [input, output] :
+//      IteratorRange(begin(streams) + 1, end(streams))) {
+//    this_thread::sleep_for(random_time());
+//    if (!output) {
+//      srv.UpdateDocumentBase(input);
+//    } else {
+//      srv.AddQueriesStream(input, *output);
+//    }
+//  }
+//}
 
 int main() {
   TestRunner tr;

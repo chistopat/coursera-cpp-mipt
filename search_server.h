@@ -8,25 +8,39 @@
 #include <map>
 #include <unordered_map>
 #include <string>
+#include <future>
+#include <functional>
+#include <mutex>
+
+
 using namespace std;
 
-class InvertedIndex {
+template <typename T>
+class Synchronized {
 public:
-  void Add(const string& document);
-  list<size_t> Lookup(const string& word) const;
+  explicit Synchronized(T initial = T())
+      : value(move(initial))
+  {
+  }
 
-  const string& GetDocument(size_t id) const {
-    return docs[id];
+  struct Access {
+    T& ref_to_value;
+    lock_guard<mutex> guard;
+  };
+
+  Access GetAccess() {
+    return {value, lock_guard(m)};
   }
 
 private:
-  map<string, list<size_t>> index;
-  vector<string> docs;
+  T value;
+  mutex m;
 };
+
 
 class QuickIndex {
 public:
-  void Add(const string& document);
+  void Add(string&& document);
   vector<std::pair<size_t,size_t>> Lookup(const string& word) const;
   size_t GetDocumentsCount() const;
 private:
@@ -40,7 +54,10 @@ public:
   explicit SearchServer(istream& document_input);
   void UpdateDocumentBase(istream& document_input);
   void AddQueriesStream(istream& query_input, ostream& search_results_output);
+  void AddQueriesStreamSingle(istream& query_input,
+                              ostream& search_results_output);
 
 private:
-  QuickIndex index;
+  Synchronized<QuickIndex> index_;
+  std::vector<std::future<void>> futures_;
 };
