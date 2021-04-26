@@ -7,58 +7,52 @@
 using namespace std;
 
 struct Address {
-  string city, street;
-  int building;
+    string city, street;
+    int building;
 
-  bool operator==(const Address& other) const {
-      return city == other.city
-        && street == other.street
-        && building == other.building;
-  }
+    bool operator==(const Address& other) const {
+        return city == other.city && street == other.street && building == other.building;
+    }
 };
 
 struct Person {
-  bool operator==(const Person& other) const {
-      return name == other.name
-             && height == other.height
-             && weight == other.weight
-             && address == other.address;
-  }
-  string name;
-  int height;
-  double weight;
-  Address address;
+    bool operator==(const Person& other) const {
+        return name == other.name && height == other.height && weight == other.weight && address == other.address;
+    }
+    string name;
+    int height;
+    double weight;
+    Address address;
 };
 
-
 struct AddressHasher {
-  size_t operator()(const Address& address) const {
-      const hash<std::string> string_hasher;
-      const hash<int> int_hasher;
+    size_t operator()(const Address& address) const {
+        const hash<std::string> string_hasher;
+        const hash<int> int_hasher;
 
-      const size_t kMaxSize = std::numeric_limits<size_t>::max();
-      const size_t city_hash = string_hasher(address.city) * kMaxSize * kMaxSize;
-      const size_t street_hash = string_hasher(address.street) * kMaxSize;
+        const size_t kMaxSize = std::numeric_limits<size_t>::max();
+        const size_t city_hash = string_hasher(address.city) * kMaxSize * kMaxSize;
+        const size_t street_hash = string_hasher(address.street) * kMaxSize;
 
-      return city_hash + street_hash + int_hasher(address.building);
-  }
+        return city_hash + street_hash + int_hasher(address.building);
+    }
 };
 
 struct PersonHasher {
-  size_t operator()(const Person& person) const{
-      const hash<std::string> string_hasher;
-      const hash<int> int_hasher;
-      const hash<double> double_hasher;
-      const AddressHasher addressHasher;
+    size_t operator()(const Person& person) const {
+        const hash<std::string> string_hasher;
+        const hash<int> int_hasher;
+        const hash<double> double_hasher;
+        const AddressHasher addressHasher;
 
-      const size_t kMaxSize = std::numeric_limits<size_t>::max();
-      const size_t name_hash = string_hasher(person.name) * kMaxSize * kMaxSize * kMaxSize;
-      const size_t height_hash = int_hasher(person.height) * kMaxSize * kMaxSize;
-      const size_t weight_hash = double_hasher(person.weight) * kMaxSize;
-      const size_t address_hash = addressHasher(person.address);
+        const size_t kMaxSize = std::numeric_limits<size_t>::max();
+        const size_t name_hash = string_hasher(person.name) * kMaxSize * kMaxSize * kMaxSize;
+        const size_t height_hash = int_hasher(person.height) * kMaxSize * kMaxSize;
+        const size_t weight_hash = double_hasher(person.weight) * kMaxSize;
+        const size_t address_hash = addressHasher(person.address);
 
-      return name_hash + height_hash + weight_hash + address_hash;
-  }
+        return name_hash + height_hash + weight_hash + address_hash;
+    }
 };
 
 // сгенерированы командой:
@@ -66,22 +60,18 @@ struct PersonHasher {
 //
 // http://www.freebsd.org/cgi/cvsweb.cgi/~checkout~/src/share/dict/propernames
 const vector<string> WORDS = {
-    "Kieran", "Jong", "Jisheng", "Vickie", "Adam", "Simon", "Lance",
-    "Everett", "Bryan", "Timothy", "Daren", "Emmett", "Edwin", "List",
-    "Sharon", "Trying", "Dan", "Saad", "Kamiya", "Nikolai", "Del",
-    "Casper", "Arthur", "Mac", "Rajesh", "Belinda", "Robin", "Lenora",
-    "Carisa", "Penny", "Sabrina", "Ofer", "Suzanne", "Pria", "Magnus",
-    "Ralph", "Cathrin", "Phill", "Alex", "Reinhard", "Marsh", "Tandy",
-    "Mongo", "Matthieu", "Sundaresan", "Piotr", "Ramneek", "Lynne", "Erwin",
-    "Edgar", "Srikanth", "Kimberly", "Jingbai", "Lui", "Jussi", "Wilmer",
-    "Stuart", "Grant", "Hotta", "Stan", "Samir", "Ramadoss", "Narendra",
-    "Gill", "Jeff", "Raul", "Ken", "Rahul", "Max", "Agatha",
-    "Elizabeth", "Tai", "Ellen", "Matt", "Ian", "Toerless", "Naomi",
-    "Rodent", "Terrance", "Ethan", "Florian", "Rik", "Stanislaw", "Mott",
-    "Charlie", "Marguerite", "Hitoshi", "Panacea", "Dieter", "Randell", "Earle",
-    "Rajiv", "Ted", "Mann", "Bobbie", "Pat", "Olivier", "Harmon",
-    "Raman", "Justin"
-};
+    "Kieran",  "Jong",      "Jisheng", "Vickie",   "Adam",       "Simon",    "Lance",    "Everett",   "Bryan",
+    "Timothy", "Daren",     "Emmett",  "Edwin",    "List",       "Sharon",   "Trying",   "Dan",       "Saad",
+    "Kamiya",  "Nikolai",   "Del",     "Casper",   "Arthur",     "Mac",      "Rajesh",   "Belinda",   "Robin",
+    "Lenora",  "Carisa",    "Penny",   "Sabrina",  "Ofer",       "Suzanne",  "Pria",     "Magnus",    "Ralph",
+    "Cathrin", "Phill",     "Alex",    "Reinhard", "Marsh",      "Tandy",    "Mongo",    "Matthieu",  "Sundaresan",
+    "Piotr",   "Ramneek",   "Lynne",   "Erwin",    "Edgar",      "Srikanth", "Kimberly", "Jingbai",   "Lui",
+    "Jussi",   "Wilmer",    "Stuart",  "Grant",    "Hotta",      "Stan",     "Samir",    "Ramadoss",  "Narendra",
+    "Gill",    "Jeff",      "Raul",    "Ken",      "Rahul",      "Max",      "Agatha",   "Elizabeth", "Tai",
+    "Ellen",   "Matt",      "Ian",     "Toerless", "Naomi",      "Rodent",   "Terrance", "Ethan",     "Florian",
+    "Rik",     "Stanislaw", "Mott",    "Charlie",  "Marguerite", "Hitoshi",  "Panacea",  "Dieter",    "Randell",
+    "Earle",   "Rajiv",     "Ted",     "Mann",     "Bobbie",     "Pat",      "Olivier",  "Harmon",    "Raman",
+    "Justin"};
 
 void TestSmoke() {
     vector<Person> points = {
@@ -101,10 +91,7 @@ void TestSmoke() {
 }
 
 void TestName() {
-    vector<Person> points = {
-        {"John"},
-        {"Sherlock"}
-    };
+    vector<Person> points = {{"John"}, {"Sherlock"}};
 
     unordered_set<Person, PersonHasher> point_set;
     for (const auto& point : points) {
@@ -132,7 +119,7 @@ void TestDistribution() {
     mt19937 gen(seed);
 
     uniform_int_distribution<int> height_dist(150, 200);
-    uniform_int_distribution<int> weight_dist(100, 240);  // [50, 120]
+    uniform_int_distribution<int> weight_dist(100, 240); // [50, 120]
     uniform_int_distribution<int> building_dist(1, 300);
     uniform_int_distribution<int> word_dist(0, WORDS.size() - 1);
 
@@ -167,8 +154,7 @@ void TestDistribution() {
     double pearson_stat = 0;
     for (auto bucket_size : buckets) {
         size_t size_diff = bucket_size - perfect_bucket_size;
-        pearson_stat +=
-            size_diff * size_diff / static_cast<double>(perfect_bucket_size);
+        pearson_stat += size_diff * size_diff / static_cast<double>(perfect_bucket_size);
     }
 
     // проверяем равномерность распределения методом согласия Пирсона
