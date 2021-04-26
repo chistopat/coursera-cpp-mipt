@@ -20,6 +20,7 @@ struct Record {
 };
 
 
+
 //class Database {
 //public:
 //  using RecordsIterator = Record*;
@@ -98,13 +99,11 @@ struct Record {
 
 class Database {
 public:
-    struct Index {
-
-    };
-    using DatabaseItem = std::pair<Record, Index>;
-public:
-
-  bool Put(const Record& record) {}
+  bool Put(const Record& record) {
+      if (!data_.count(record.id)) {
+          data_.insert({record.id, record});
+      }
+  }
 
   const Record* GetById(const string& id) const {}
 
@@ -119,10 +118,24 @@ public:
   template <typename Callback>
   void AllByUser(const string& user, Callback callback) const {}
 
-private:
+  private:
+    template<class Callback, class Iterator>
+    static void CallbackIterate(Iterator begin, Iterator end, Callback callback) {
+        for (auto it = begin; it!=end; ++it) {
+            if(!callback(*it->second)) {
+                break;
+            }
+        }
+    }
 
+  private:
+      struct Index {
 
+      };
+      std::unordered_map<std::string, pair<Record, std::set<Record*>::iterator>> data_;
+      std::set<Record*> index;
 };
+
 
 void TestRangeBoundaries() {
     const int good_karma = 1000;
