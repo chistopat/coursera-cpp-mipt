@@ -5,3 +5,4 @@ set(CMAKE_CXX_STANDARD 17)
 
 #brown
 add_executable(hashtable  brown/week1/hashtable/test_runner.h brown/week1/hashtable/main.cpp)
+add_executable(set_iterator  brown/week1/set_iterator/test_runner.h brown/week1/set_iterator/main.cpp)
