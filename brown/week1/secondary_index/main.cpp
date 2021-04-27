@@ -2,140 +2,103 @@
 
 #include <iostream>
 #include <map>
-#include <string>
 #include <unordered_map>
 
 using namespace std;
 
 struct Record {
-  string id;
-  string title;
-  string user;
-  int timestamp;
-  int karma;
-
-  friend bool operator< (const Record& left, const Record& right) {
-      return left.id < right.id;
-  }
+    std::string id;
+    std::string title;
+    std::string user;
+    int timestamp;
+    int karma;
 };
-
-
-
-//class Database {
-//public:
-//  using RecordsIterator = Record*;
-//public:
-//  bool Put(const Record& record) {
-//      if (!id_index_.count(record.id)) {
-//
-//
-//          id_index_.insert({record.id, *record});
-//          user_index_.insert({record.user, &record});
-//          timestamp_index_.insert({record.timestamp, it});
-//          karma_index_.insert({record.karma, it});
-//      }
-//      return is_inserted;
-//  }
-//
-//  const Record* GetById(const string& id) const {
-//      if (id_index_.count(id)) {
-//          return &(*id_index_.at(id));
-//      }
-//      return nullptr;
-//  }
-//
-//  bool Erase(const string& id) {
-//
-//  }
-//
-//  template <typename Callback>
-//  void RangeByTimestamp(int low, int high, Callback callback) const {
-//      auto begin = timestamp_index_.lower_bound(low);
-//      auto end = timestamp_index_.upper_bound(high);
-//      CallbackIterate(begin, end, callback);
-//  }
-//
-//  template <typename Callback>
-//  void RangeByKarma(int low, int high, Callback callback) const {
-//      auto begin = karma_index_.lower_bound(low);
-//      auto end = karma_index_.upper_bound(high);
-//      CallbackIterate(begin, end, callback);
-//  }
-//
-//  template <typename Callback>
-//  void AllByUser(const string& user, Callback callback) const {
-//      auto [begin, end] = user_index_.equal_range(user);
-//      CallbackIterate(begin, end, callback);
-//  }
-//
-//private:
-//  struct DBItem{
-//      Record* record_ptr;
-//      std::unordered_map<std::string, Record*>::iterator id_it;
-//      std::multimap<std::string, Record*>::iterator user_it;
-//      std::multimap<int, Record*>::iterator timestamp_it;
-//      std::multimap<int, Record*>::iterator karma_it;
-//
-//      friend bool operator< (const DBItem& left, const DBItem& right) {
-//          return left.record_ptr->id < right.record_ptr->id;
-//      }
-//  };
-//
-//  std::set<DBItem> records_;
-//  std::unordered_map<std::string, RecordsIterator> id_index_;
-//  std::multimap<std::string, RecordsIterator> user_index_;
-//  std::multimap<int, RecordsIterator> timestamp_index_;
-//  std::multimap<int, RecordsIterator> karma_index_;
-//
-//  template<class Callback, class Iterator>
-//  static void CallbackIterate(Iterator begin, Iterator end, Callback callback) {
-//      for (auto it = begin; it!=end; ++it) {
-//          if(!callback(*it->second)) {
-//              break;
-//          }
-//      }
-//  }
-//};
 
 class Database {
 public:
-  bool Put(const Record& record) {
-      if (!data_.count(record.id)) {
-          data_.insert({record.id, record});
-      }
-  }
+    bool Put(const Record& record) {
+        bool result = false;
+        if (!data_.count(record.id)) {
+            DataItem item = {record, index_by_user_.end(), index_by_timestamp_.end(), index_by_karma_.end()};
+            data_.insert({record.id, move(item)});
+            data_[record.id].index_by_user_iterator = index_by_user_.insert({record.user, &data_[record.id].record});
+            data_[record.id].index_by_karma_iterator = index_by_karma_.insert({record.karma, &data_[record.id].record});
+            data_[record.id].index_by_timestamp_iterator =
+                index_by_timestamp_.insert({record.timestamp, &data_[record.id].record});
 
-  const Record* GetById(const string& id) const {}
+            result = true;
+        }
+        return result;
+    }
 
-  bool Erase(const string& id) {}
+    [[nodiscard]] const Record* GetById(const std::string& id) const {
+        if (data_.count(id)) {
+            return &data_.at(id).record;
+        }
+        return nullptr;
+    }
 
-  template <typename Callback>
-  void RangeByTimestamp(int low, int high, Callback callback) const {}
+    bool Erase(const std::string& id) {
+        bool result = false;
+        if (data_.count(id)) {
+            auto item_node = data_.extract(id);
+            index_by_user_.erase(item_node.mapped().index_by_user_iterator);
+            index_by_timestamp_.erase(item_node.mapped().index_by_timestamp_iterator);
+            index_by_karma_.erase(item_node.mapped().index_by_karma_iterator);
+            result = true;
+        }
+        return result;
+    }
 
-  template <typename Callback>
-  void RangeByKarma(int low, int high, Callback callback) const {}
-
-  template <typename Callback>
-  void AllByUser(const string& user, Callback callback) const {}
-
-  private:
-    template<class Callback, class Iterator>
-    static void CallbackIterate(Iterator begin, Iterator end, Callback callback) {
-        for (auto it = begin; it!=end; ++it) {
-            if(!callback(*it->second)) {
+    template <typename Callback>
+    void RangeByTimestamp(int low, int high, Callback callback) const {
+        auto begin = index_by_timestamp_.lower_bound(low);
+        auto end = index_by_timestamp_.upper_bound(high);
+        for (auto it = begin; it != end; ++it) {
+            if (!callback(*it->second)) {
                 break;
             }
         }
     }
 
-  private:
-      struct Index {
+    template <typename Callback>
+    void RangeByKarma(int low, int high, Callback callback) const {
+        auto begin = index_by_karma_.lower_bound(low);
+        auto end = index_by_karma_.upper_bound(high);
+        for (auto it = begin; it != end; ++it) {
+            if (!callback(*it->second)) {
+                break;
+            }
+        }
+    }
 
-      };
-      std::unordered_map<std::string, pair<Record, std::set<Record*>::iterator>> data_;
-      std::set<Record*> index;
+    template <typename Callback>
+    void AllByUser(const std::string& user, Callback callback) const {
+        auto [begin, end] = index_by_user_.equal_range(user);
+        for (auto it = begin; it != end; ++it) {
+            if (!callback(*it->second)) {
+                break;
+            }
+        }
+    }
+
+private:
+    using RecordPtr = const Record*;
+
+private:
+    struct DataItem {
+        Record record;
+        std::multimap<std::string, RecordPtr>::iterator index_by_user_iterator;
+        std::multimap<int, RecordPtr>::iterator index_by_timestamp_iterator;
+        std::multimap<int, RecordPtr>::iterator index_by_karma_iterator;
+    };
+
+private:
+    std::unordered_map<std::string, DataItem> data_;
+    std::multimap<int, RecordPtr> index_by_timestamp_;
+    std::multimap<int, RecordPtr> index_by_karma_;
+    std::multimap<std::string, RecordPtr> index_by_user_;
 };
-
 
 void TestRangeBoundaries() {
     const int good_karma = 1000;
@@ -145,15 +108,13 @@ void TestRangeBoundaries() {
     db.Put({"id1", "Hello there", "master", 1536107260, good_karma});
     db.Put({"id2", "O>>-<", "general2", 1536107260, bad_karma});
 
-
-
     int count = 0;
     db.RangeByKarma(bad_karma, good_karma, [&count](const Record&) {
         ++count;
         return true;
     });
 
-    ASSERT_EQUAL(2, count);
+    ASSERT_EQUAL(2, count)
 }
 
 void TestRangeTimestampBoundaries() {
@@ -167,14 +128,13 @@ void TestRangeTimestampBoundaries() {
     db.Put({"id4", "O>>-<", "general2", 1536107263, bad_karma});
     db.Put({"id5", "O>>-<", "general2", 1536107264, bad_karma});
 
-
     {
         int count = 0;
         db.RangeByTimestamp(1536107259, 1536107265, [&count](const Record&) {
             ++count;
             return true;
         });
-        ASSERT_EQUAL(5, count);
+        ASSERT_EQUAL(5, count)
     }
     {
         int count = 0;
@@ -182,13 +142,9 @@ void TestRangeTimestampBoundaries() {
             ++count;
             return true;
         });
-        ASSERT_EQUAL(3, count);
+        ASSERT_EQUAL(3, count)
     }
-
-
 }
-
-
 
 void TestSameUser() {
     Database db;
@@ -201,7 +157,7 @@ void TestSameUser() {
         return true;
     });
 
-    ASSERT_EQUAL(2, count);
+    ASSERT_EQUAL(2, count)
 }
 
 void TestReplacement() {
@@ -213,17 +169,8 @@ void TestReplacement() {
     db.Put({"id", final_body, "not-master", 1536107260, -10});
 
     auto record = db.GetById("id");
-    ASSERT(record != nullptr);
-    ASSERT_EQUAL(final_body, record->title);
-}
-
-void TestId() {
-    Database db;
-    std::vector<const std::string> ids{"a", "b", "c", "d"};
-    for (const auto& i : ids) {
-        db.Put({i});
-        ASSERT_EQUAL(i, db.GetById(i)->id);
-    }
+    ASSERT(record != nullptr)
+    ASSERT_EQUAL(final_body, record->title)
 }
 
 int main() {
@@ -232,6 +179,5 @@ int main() {
     RUN_TEST(tr, TestSameUser);
     RUN_TEST(tr, TestReplacement);
     RUN_TEST(tr, TestRangeTimestampBoundaries);
-    RUN_TEST(tr, TestId);
     return 0;
 }
