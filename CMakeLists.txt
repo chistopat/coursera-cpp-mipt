@@ -18,6 +18,6 @@ add_executable(ini_parser
 
 add_executable(namespace_refactor
         brown/week2/namespace_refactor/test_runner.h
-        brown/week2/namespace_refactor/stats_aggreagator_test.cpp
-        brown/week2/namespace_refactor/stats_aggreagtor.cpp
+        brown/week2/namespace_refactor/stats_aggregator_test.cpp
+        brown/week2/namespace_refactor/stats_aggregator.cpp
         brown/week2/namespace_refactor/main.cpp)
