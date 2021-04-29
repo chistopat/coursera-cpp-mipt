@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 project(yellow)
 
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_FLAGS "-Wall -Wextra -Wpedantic -Werror")
+set(CMAKE_CXX_FLAGS "-Wall -Wextra -Wpedantic")
 
 #brown
 add_executable(hashtable  brown/week1/hashtable/test_runner.h brown/week1/hashtable/main.cpp)
@@ -28,3 +28,5 @@ add_executable(double_dispatch
         brown/week2/double_dispatch/geo2d.cpp
         brown/week2/double_dispatch/geo2d.h
         brown/week2/double_dispatch/main.cpp)
+
+add_executable(comment_server  brown/week2/comment_server/test_runner.h brown/week2/comment_server/main.cpp)
