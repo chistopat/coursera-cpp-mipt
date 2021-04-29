@@ -21,3 +21,10 @@ add_executable(namespace_refactor
         brown/week2/namespace_refactor/stats_aggregator_test.cpp
         brown/week2/namespace_refactor/stats_aggregator.cpp
         brown/week2/namespace_refactor/main.cpp)
+
+add_executable(double_dispatch
+        brown/week2/double_dispatch/test_runner.h
+        brown/week2/double_dispatch/game_object.h
+        brown/week2/double_dispatch/geo2d.cpp
+        brown/week2/double_dispatch/geo2d.h
+        brown/week2/double_dispatch/main.cpp)
