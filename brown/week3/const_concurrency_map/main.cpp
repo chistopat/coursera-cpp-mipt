@@ -8,6 +8,7 @@
 #include <utility>
 #include <algorithm>
 #include <random>
+
 using namespace std;
 
 template <typename K, typename V, typename Hash = std::hash<K>>
@@ -16,24 +17,54 @@ public:
     using MapType = unordered_map<K, V, Hash>;
 
     struct WriteAccess {
+        lock_guard<mutex> guard;
         V& ref_to_value;
     };
 
     struct ReadAccess {
+        lock_guard<mutex> guard;
         const V& ref_to_value;
     };
 
-    explicit ConcurrentMap(size_t bucket_count);
+    explicit ConcurrentMap(size_t bucket_count)
+        : data_(bucket_count)
+        , buckets_size(bucket_count) {
 
-    WriteAccess operator[](const K& key);
-    ReadAccess At(const K& key) const;
+    }
 
-    bool Has(const K& key) const;
+    WriteAccess operator[](const K& key) {
+        auto& bucket = data_[hasher(key) % buckets_size];
+        return {lock_guard(bucket.first), bucket.second[key]};
+    }
+    ReadAccess At(const K& key) const {
+        auto& bucket = data_.at(hasher(key) % buckets_size);
+        return {lock_guard(bucket.first), bucket.second.at(key)};
+    }
 
-    MapType BuildOrdinaryMap() const;
+    bool Has(const K& key) const {
+       auto& [m, bucket] = data_.at(hasher(key) % buckets_size);
+       auto g =  Lock(m);
+       return bucket.count(key);
+    }
+
+    MapType BuildOrdinaryMap() const {
+        MapType result;
+        for (auto& [mtx, bucket] : data_) {
+            auto g = Lock(mtx);
+            result.insert(begin(bucket), end(bucket));
+        }
+        return result;
+    }
 
 private:
     Hash hasher;
+    mutable std::vector<std::pair<mutex, MapType>> data_;
+    const size_t buckets_size;
+
+private:
+static auto Lock(mutex& m) {
+    return lock_guard<mutex>{m};
+}
 };
 
 void RunConcurrentUpdates(
