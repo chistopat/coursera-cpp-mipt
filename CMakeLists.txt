@@ -3,6 +3,7 @@ project(yellow)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "-Wall -Wextra -Wpedantic")
+set(CMAKE_CXX_FLAGS "-pthread")
 
 #brown
 add_executable(hashtable  brown/week1/hashtable/test_runner.h brown/week1/hashtable/main.cpp)
@@ -32,3 +33,8 @@ add_executable(double_dispatch
 add_executable(comment_server  brown/week2/comment_server/test_runner.h brown/week2/comment_server/main.cpp)
 
 add_executable(lazy_value brown/week3/lazy_value/main.cpp brown/week3/lazy_value/test_runner.h)
+
+add_executable(const_concurrency_map
+        brown/week3/const_concurrency_map/main.cpp
+        brown/week3/const_concurrency_map/test_runner.h
+        brown/week3/const_concurrency_map/profile.h)
