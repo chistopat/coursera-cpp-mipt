@@ -38,3 +38,8 @@ add_executable(const_concurrency_map
         brown/week3/const_concurrency_map/main.cpp
         brown/week3/const_concurrency_map/test_runner.h
         brown/week3/const_concurrency_map/profile.h)
+
+add_executable(polinomial
+        brown/week3/polinomial/main.cpp
+        common/test_runner.h
+        common/profile.h)
