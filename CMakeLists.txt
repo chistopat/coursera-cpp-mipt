@@ -30,3 +30,5 @@ add_executable(double_dispatch
         brown/week2/double_dispatch/main.cpp)
 
 add_executable(comment_server  brown/week2/comment_server/test_runner.h brown/week2/comment_server/main.cpp)
+
+add_executable(lazy_value brown/week3/lazy_value/main.cpp brown/week3/lazy_value/test_runner.h)
