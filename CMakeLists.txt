@@ -3,7 +3,6 @@ project(yellow)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "-Wall -Wextra -Wpedantic")
-set(CMAKE_CXX_FLAGS "-pthread")
 
 #brown
 add_executable(hashtable  brown/week1/hashtable/test_runner.h brown/week1/hashtable/main.cpp)
@@ -43,3 +42,9 @@ add_executable(polinomial
         brown/week3/polinomial/main.cpp
         common/test_runner.h
         common/profile.h)
+
+add_executable(pipeline
+        brown/week3/pipeline/main.cpp
+        common/test_runner.h
+        common/profile.h)
+
