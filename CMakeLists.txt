@@ -29,7 +29,7 @@ add_executable(double_dispatch
         brown/week2/double_dispatch/geo2d.h
         brown/week2/double_dispatch/main.cpp)
 
-add_executable(comment_server  brown/week2/comment_server/test_runner.h brown/week2/comment_server/main.cpp)
+add_executable(comment_server  brown/week2/comment_server/test_runner.h brown/week2/comment_server/main.cpp brown/week4/textures/main.cpp)
 
 add_executable(lazy_value brown/week3/lazy_value/main.cpp brown/week3/lazy_value/test_runner.h)
 
@@ -51,3 +51,9 @@ add_executable(pipeline
 add_executable(expression brown/week3/expression/main.cpp brown/week3/expression/test_runner.h
         brown/week3/expression/Common.h brown/week3/expression/common.cpp)
 
+add_executable(textures
+        brown/week4/textures/main.cpp
+        brown/week4/textures/test_runner.h
+        brown/week4/textures/Textures.h
+        brown/week4/textures/Textures.cpp
+        brown/week4/textures/Common.h brown/week4/textures/solution.cpp)
