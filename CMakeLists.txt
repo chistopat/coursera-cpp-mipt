@@ -48,3 +48,6 @@ add_executable(pipeline
         common/test_runner.h
         common/profile.h)
 
+add_executable(expression brown/week3/expression/main.cpp brown/week3/expression/test_runner.h
+        brown/week3/expression/Common.h brown/week3/expression/common.cpp)
+
