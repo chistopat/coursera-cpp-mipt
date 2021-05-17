@@ -57,3 +57,8 @@ add_executable(textures
         brown/week4/textures/Textures.h
         brown/week4/textures/Textures.cpp
         brown/week4/textures/Common.h brown/week4/textures/solution.cpp)
+
+add_executable(cache
+        brown/week4/cache/main.cpp
+        brown/week4/cache/test_runner.h
+        brown/week4/cache/Common.h brown/week4/cache/solution.cpp)

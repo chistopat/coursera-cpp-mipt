@@ -16,15 +16,15 @@ class ConcurrentMap {
 public:
     using MapType = unordered_map<K, V, Hash>;
 
-    struct WriteAccess {
-        lock_guard<mutex> guard;
-        V& ref_to_value;
-    };
+        struct WriteAccess {
+            lock_guard<mutex> guard;
+            V& ref_to_value;
+        };
 
-    struct ReadAccess {
-        lock_guard<mutex> guard;
-        const V& ref_to_value;
-    };
+        struct ReadAccess {
+            lock_guard<mutex> guard;
+            const V& ref_to_value;
+        };
 
     explicit ConcurrentMap(size_t bucket_count)
         : data_(bucket_count)
