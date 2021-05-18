@@ -62,3 +62,7 @@ add_executable(cache
         brown/week4/cache/main.cpp
         brown/week4/cache/test_runner.h
         brown/week4/cache/Common.h brown/week4/cache/solution.cpp)
+
+add_executable(uniqueptr
+        brown/week4/uniqueptr/main.cpp
+        brown/week4/uniqueptr/test_runner.h)
