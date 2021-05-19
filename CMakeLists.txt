@@ -66,3 +66,13 @@ add_executable(cache
 add_executable(uniqueptr
         brown/week4/uniqueptr/main.cpp
         brown/week4/uniqueptr/test_runner.h)
+
+add_executable(raii_booking
+        brown/week4/raii_booking/main.cpp
+        brown/week4/raii_booking/test_runner.h
+        brown/week4/raii_booking/test.cpp
+        brown/week4/raii_booking/new_trip_manager.h
+        brown/week4/raii_booking/new_booking_providers.h
+        brown/week4/raii_booking/old_trip_manager.h
+        brown/week4/raii_booking/old_booking_providers.h
+        )
