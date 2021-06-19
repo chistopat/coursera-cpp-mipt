@@ -58,21 +58,5 @@ add_executable(textures
         brown/week4/textures/Textures.cpp
         brown/week4/textures/Common.h brown/week4/textures/solution.cpp)
 
-add_executable(cache
-        brown/week4/cache/main.cpp
-        brown/week4/cache/test_runner.h
-        brown/week4/cache/Common.h brown/week4/cache/solution.cpp)
-
-add_executable(uniqueptr
-        brown/week4/uniqueptr/main.cpp
-        brown/week4/uniqueptr/test_runner.h)
-
-add_executable(raii_booking
-        brown/week4/raii_booking/main.cpp
-        brown/week4/raii_booking/test_runner.h
-        brown/week4/raii_booking/test.cpp
-        brown/week4/raii_booking/new_trip_manager.h
-        brown/week4/raii_booking/new_booking_providers.h
-        brown/week4/raii_booking/old_trip_manager.h
-        brown/week4/raii_booking/old_booking_providers.h
-        )
+add_executable(forbidden brown/week5/forbidden/forbidden.cpp
+        brown/week5/forbidden/test_runner.h)
