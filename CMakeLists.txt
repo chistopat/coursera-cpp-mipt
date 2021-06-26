@@ -60,3 +60,22 @@ add_executable(textures
 
 add_executable(forbidden brown/week5/forbidden/forbidden.cpp
         brown/week5/forbidden/test_runner.h)
+
+add_executable(transport_a
+        brown/week6/transport/version_a/main.cpp
+        brown/week6/transport/version_a/test_runner.h
+        brown/week6/transport/version_a/tests.h
+        brown/week6/transport/version_a/components.cpp
+        brown/week6/transport/version_a/components.h
+        brown/week6/transport/version_a/base_request.cpp
+        brown/week6/transport/version_a/base_request.h
+        brown/week6/transport/version_a/response.cpp
+        brown/week6/transport/version_a/response.h)
+
+add_executable(transport_a1
+        brown/week6/transport/version_a1/main.cpp
+        brown/week6/transport/version_a1/test_runner.h)
+
+add_executable(transport_a2
+        brown/week6/transport/version_a2/main.cpp
+        brown/week6/transport/version_a2/test_runner.h)
