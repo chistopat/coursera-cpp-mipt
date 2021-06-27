@@ -58,26 +58,24 @@ add_executable(textures
         brown/week4/textures/Textures.cpp
         brown/week4/textures/Common.h brown/week4/textures/solution.cpp)
 
-add_executable(cache
-        brown/week4/cache/main.cpp
-        brown/week4/cache/test_runner.h
-        brown/week4/cache/Common.h brown/week4/cache/solution.cpp)
+add_executable(forbidden brown/week5/forbidden/forbidden.cpp
+        brown/week5/forbidden/test_runner.h)
 
-add_executable(uniqueptr
-        brown/week4/uniqueptr/main.cpp
-        brown/week4/uniqueptr/test_runner.h)
+add_executable(transport_a
+        brown/week6/transport/version_a/main.cpp
+        brown/week6/transport/version_a/test_runner.h
+        brown/week6/transport/version_a/tests.h
+        brown/week6/transport/version_a/components.cpp
+        brown/week6/transport/version_a/components.h
+        brown/week6/transport/version_a/base_request.cpp
+        brown/week6/transport/version_a/base_request.h
+        brown/week6/transport/version_a/response.cpp
+        brown/week6/transport/version_a/response.h)
 
-add_executable(raii_booking
-        brown/week4/raii_booking/main.cpp
-        brown/week4/raii_booking/test_runner.h
-        brown/week4/raii_booking/test.cpp
-        brown/week4/raii_booking/new_trip_manager.h
-        brown/week4/raii_booking/new_booking_providers.h
-        brown/week4/raii_booking/old_trip_manager.h
-        brown/week4/raii_booking/old_booking_providers.h
-        )
+add_executable(transport_a1
+        brown/week6/transport/version_a1/main.cpp
+        brown/week6/transport/version_a1/test_runner.h)
 
-add_executable(budget
-brown/week5/budget/budget.cpp
-brown/week5/budget/test_runner.h
-)
+add_executable(transport_a2
+        brown/week6/transport/version_a2/main.cpp
+        brown/week6/transport/version_a2/test_runner.h)
