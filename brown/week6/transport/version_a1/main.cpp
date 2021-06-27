@@ -1,33 +1,26 @@
 #include "test_runner.h"
 
+#include <cmath>
 #include <array>
 #include <algorithm>
-#include <exception>
 #include <iostream>
 #include <memory>
 #include <optional>
 #include <string>
-#include <system_error>
 #include <unordered_map>
 #include <vector>
 
 using namespace std;
 
-template<typename It>
-class Range {
-public:
-    Range(It begin, It end) : begin_(begin), end_(end) {}
-    It begin() const { return begin_; }
-    It end() const { return end_; }
+bool AreDoubleSame(double left, double right)
+{
+    return std::fabs(left - right) < 1e-7;
+}
 
-private:
-    It begin_;
-    It end_;
-};
 
 pair<string_view, optional<string_view>> SplitTwoStrict(string_view s, string_view delimiter = " ") {
     const size_t pos = s.find(delimiter);
-    if (pos == s.npos) {
+    if (pos == string::npos) {
         return {s, nullopt};
     } else {
         return {s.substr(0, pos), s.substr(pos + delimiter.length())};
@@ -46,28 +39,6 @@ string_view ReadToken(string_view& s, string_view delimiter = " ") {
 }
 
 template <typename Number>
-Number ConvertToNumber(string_view str) {
-    // use std::from_chars when available to git rid of string copy
-    size_t pos;
-    const int result = stod(string(str), &pos);
-    if (pos != str.length()) {
-        std::stringstream error;
-        error << "string " << str << " contains " << (str.length() - pos) << " trailing chars";
-        throw invalid_argument(error.str());
-    }
-    return static_cast<Number>(result);
-}
-
-template <typename Number>
-void ValidateBounds(Number number_to_check, Number min_value, Number max_value) {
-    if (number_to_check < min_value || number_to_check > max_value) {
-        std::stringstream error;
-        error << number_to_check << " is out of [" << min_value << ", " << max_value << "]";
-        throw out_of_range(error.str());
-    }
-}
-
-template <typename Number>
 Number ReadNumberOnLine(istream& stream) {
     Number number;
     stream >> number;
@@ -81,9 +52,32 @@ vector<string_view> SplitBy(string_view s, string_view delimiter) {
     while (!s.empty()) {
         size_t pos = s.find(delimiter);
         result.push_back(s.substr(0, pos));
-        s.remove_prefix(pos != s.npos ? pos + delimiter.length() : s.size());
+        s.remove_prefix(pos != string::npos ? pos + delimiter.length() : s.size());
     }
     return result;
+}
+
+class Point {
+
+public:
+    static constexpr double halfC = 3.14159265358979323846 / 180;
+
+public:
+    explicit Point(double lat,  double lon)
+        : latitude(lat * halfC)
+        , longitude(lon * halfC) {
+    }
+
+    double latitude;
+    double longitude;
+
+public:
+
+};
+
+ostream& operator<< (ostream& os, const Point& point) {
+    os << point.latitude << " " << point.longitude;
+    return os;
 }
 
 class Stop {
@@ -94,16 +88,21 @@ public:
     }
 
 public:
-    Stop(const string& name, double latitude, double longitude)
+    Stop(const string& name, double lat, double lon)
         : name(name)
-        , latitude(latitude)
-        , longitude(longitude) {}
+        , point(lat, lon) {
+
+    }
 
 public:
     string name;
-    double latitude;
-    double longitude;
+    Point point;
 };
+
+ostream& operator<< (ostream& os, const Stop& stop) {
+    os << stop.name << ": " << stop.point.latitude << " " << stop.point.longitude;
+    return os;
+}
 
 class BusRoute {
 public:
@@ -121,11 +120,12 @@ public:
         , unique_stops_count(0)
         , route(stop_list)
     {
+        ComputeRouteLength();
         SetTotalStopsCount();
         SetUniqueStopsCount();
     }
 
-    string ToString() {
+    string ToString() const {
         ostringstream os;
         os << total_stops_count << " stops on route, "
            << unique_stops_count << " unique stops, "
@@ -155,6 +155,25 @@ private:
             uniq_names.insert(stop->name);
         }
         unique_stops_count = uniq_names.size();
+    }
+
+    void ComputeRouteLength() {
+         auto first = route.begin();
+         for (auto it = route.begin() + 1; it != route.end(); ++it) {
+             length += LengthBetweenPoints(*first, *it);
+             first = it;
+         }
+         if (!is_roundtrip) {
+             length *= 2;
+         }
+    }
+public:
+    static double LengthBetweenPoints(shared_ptr<Stop> left, shared_ptr<Stop> right) {
+        auto result = acos((sin(left->point.latitude) * sin(right->point.latitude)) +
+                        (cos(left->point.latitude) * cos(right->point.latitude) *
+             cos(fabs(left->point.longitude - right->point.longitude)))
+        ) * 6371000;
+        return result;
     }
 };
 
@@ -270,8 +289,8 @@ struct AddStopRequest : public ModifyRequest {
     AddStopRequest() : ModifyRequest(Type::ADD_STOP) {}
     void ParseFrom(string_view input) override {
         name = ReadToken(input, ":");
-        latitude = ConvertToNumber<double>(ReadToken(input, ","));
-        longitude = ConvertToNumber<double>(input);
+        latitude = stod(string(ReadToken(input, ",")));
+        longitude = stod(string(input));
     }
 
     void Process(TransportManager& manager) const override {
@@ -370,7 +389,7 @@ RequestHolder ParseRequest(DataBaseMode mode, string_view request_str) {
     return request;
 }
 array<vector<RequestHolder>, REQUESTS_TYPE_COUNT> ReadRequests(DataBaseMode mode, istream& in_stream = cin) {
-    const size_t request_count = ReadNumberOnLine<size_t>(in_stream);
+    const auto request_count = ReadNumberOnLine<size_t>(in_stream);
 
     array<vector<RequestHolder>, REQUESTS_TYPE_COUNT> requests;
     for (auto& bucket : requests) {
@@ -410,7 +429,7 @@ void ProcessWriteRequests(const array<vector<RequestHolder>, REQUESTS_TYPE_COUNT
 }
 
 ostream& operator<< (ostream& os, const ResponseHolder& response) {
-    os << response->object_name << ": " << response->message;
+    os << "Bus " << response->object_name << ": " << response->message;
     return os;
 }
 
@@ -427,15 +446,15 @@ namespace Tests {
         const auto a = transport_manager.GetStop("a");
 
         ASSERT_EQUAL(a->name, "a")
-        ASSERT_EQUAL(a->latitude, 1.0)
-        ASSERT_EQUAL(a->longitude, 0.0)
+        ASSERT(AreDoubleSame(a->point.latitude, 0.0174533))
+        ASSERT(AreDoubleSame(a->point.longitude, 0.0))
     }
 
     void AddBus() {
         TransportManager transport_manager;
-        transport_manager.AddStop("a", 1.0, 0.0);
-        transport_manager.AddStop("b", 1.0, 0.0);
-        transport_manager.AddStop("c", 1.0, 0.0);
+        transport_manager.AddStop("a", 55.611087, 37.20829);
+        transport_manager.AddStop("b", 55.595884, 37.209755);
+        transport_manager.AddStop("c", 55.632761, 37.333324);
 
         transport_manager.AddBus("759", true, {"a", "b", "c", "a"});
         transport_manager.AddBus("000", false, {"a", "b", "c"});
@@ -443,8 +462,8 @@ namespace Tests {
         const auto bus = transport_manager.GetBus("759");
         const auto bus2 = transport_manager.GetBus("000");
 
-        ASSERT_EQUAL(bus->ToString(), "4 stops on route, 3 unique stops, 0 route length")
-        ASSERT_EQUAL(bus2->ToString(), "5 stops on route, 3 unique stops, 0 route length")
+        ASSERT_EQUAL(bus->ToString(), "4 stops on route, 3 unique stops, 18681.8 route length")
+        ASSERT_EQUAL(bus2->ToString(), "5 stops on route, 3 unique stops, 20939.5 route length")
     }
 
     void Smoke() {
@@ -465,56 +484,39 @@ namespace Tests {
                                   "Bus 750\n"
                                   "Bus 751\n";
         is.str(input);
+
+        const string output = "Bus 256: 6 stops on route, 5 unique stops, 4371.02 route length\n"
+                              "Bus 750: 5 stops on route, 3 unique stops, 20939.5 route length\n"
+                              "Bus 751: not found\n";
+
+        ostringstream os;
+
         TransportManager manager;
         const auto requests_to_write = ReadRequests(DataBaseMode::WRITE, is);
         const auto requests_to_read = ReadRequests(DataBaseMode::READ, is);
         ProcessWriteRequests(requests_to_write, manager);
         const auto responses = ProcessReadRequests(requests_to_read, manager);
-        PrintResponses(responses);
+        PrintResponses(responses, os);
+        auto result = os.str();
+        ASSERT_EQUAL(result, output)
     }
-
-    void NotFoundResponse() {
-        std::istringstream is;
-        const std::string input = "10\n"
-                                  "Stop Tolstopaltsevo: 55.611087, 37.20829\n"
-                                  "Stop Marushkino: 55.595884, 37.209755\n"
-                                  "Bus 256: Biryulyovo Zapadnoye > Biryusinka > Universam > Biryulyovo Tovarnaya > Biryulyovo Passazhirskaya > Biryulyovo Zapadnoye\n"
-                                  "Bus 750: Tolstopaltsevo - Marushkino - Rasskazovka\n"
-                                  "Stop Rasskazovka: 55.632761, 37.333324\n"
-                                  "Stop Biryulyovo Zapadnoye: 55.574371, 37.6517\n"
-                                  "Stop Biryusinka: 55.581065, 37.64839\n"
-                                  "Stop Universam: 55.587655, 37.645687\n"
-                                  "Stop Biryulyovo Tovarnaya: 55.592028, 37.653656\n"
-                                  "Stop Biryulyovo Passazhirskaya: 55.580999, 37.659164\n"
-                                  "1\n"
-                                  "Bus 750\n";
-        is.str(input);
-        TransportManager manager;
-        const auto requests_to_write = ReadRequests(DataBaseMode::WRITE, is);
-        const auto requests_to_read = ReadRequests(DataBaseMode::READ, is);
-        ProcessWriteRequests(requests_to_write, manager);
-        const auto responses = ProcessReadRequests(requests_to_read, manager);
-        PrintResponses(responses);
-    }
-
-    void Simple() {
-        ASSERT(true)
-    }
-} // namespace tests;
-
+}
 void TestAll() {
     TestRunner test_runner;
-    RUN_TEST(test_runner, Tests::Simple);
     RUN_TEST(test_runner, Tests::AddBus);
     RUN_TEST(test_runner, Tests::AddStop);
     RUN_TEST(test_runner, Tests::Smoke);
-    RUN_TEST(test_runner, Tests::NotFoundResponse);
 }
 
 int main() {
-    TestAll();
-//    const auto requests_to_write = ReadRequests(DataBaseMode::WRITE, std::cin);
-//    const auto requests_to_read = ReadRequests(DataBaseMode::READ, std::cin);
-//    ProcessRequests(requests_to_write);
+//    TestAll();
+    cout.precision(6);
+    TransportManager manager;
+    const auto requests_to_write = ReadRequests(DataBaseMode::WRITE, cin);
+    const auto requests_to_read = ReadRequests(DataBaseMode::READ, cin);
+    ProcessWriteRequests(requests_to_write, manager);
+    const auto responses = ProcessReadRequests(requests_to_read, manager);
+    PrintResponses(responses, cout);
+
     return 0;
 }
