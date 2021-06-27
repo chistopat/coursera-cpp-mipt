@@ -76,3 +76,8 @@ add_executable(raii_booking
         brown/week4/raii_booking/old_trip_manager.h
         brown/week4/raii_booking/old_booking_providers.h
         )
+
+add_executable(budget
+brown/week5/budget/budget.cpp
+brown/week5/budget/test_runner.h
+)
