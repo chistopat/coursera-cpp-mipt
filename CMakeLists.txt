@@ -76,3 +76,7 @@ add_executable(transport_a1
         brown/week6/transport/version_a1/main.cpp
         brown/week6/transport/version_a1/test_runner.h)
 
+add_executable(transport_b
+        brown/week6/transport/version_b/main.cpp
+        brown/week6/transport/version_b/test_runner.h)
+
