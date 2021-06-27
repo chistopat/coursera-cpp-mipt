@@ -2,18 +2,12 @@
 
 #include <array>
 #include <algorithm>
-#include <cmath>
-#include <cstdint>
-#include <ctime>
 #include <exception>
 #include <iostream>
-#include <iterator>
 #include <memory>
 #include <optional>
-#include <sstream>
 #include <string>
 #include <system_error>
-#include <type_traits>
 #include <unordered_map>
 #include <vector>
 
@@ -92,42 +86,40 @@ vector<string_view> SplitBy(string_view s, string_view delimiter) {
     return result;
 }
 
-enum class BusRouteDirection {
-    ROUND,
-    ROTATE
-};
-
-struct Stop {
-    static shared_ptr<Stop> MakeStop(const string& name, double latitude, double longitude) {
+class Stop {
+public:
+    static unique_ptr<Stop> Create(const string& name, double latitude, double longitude) {
         Stop stop(name, latitude, longitude);
-        return make_shared<Stop>(move(stop));
+        return make_unique<Stop>(move(stop));
     }
 
+public:
     Stop(const string& name, double latitude, double longitude)
         : name(name)
         , latitude(latitude)
         , longitude(longitude) {}
+
+public:
     string name;
     double latitude;
     double longitude;
 };
 
-
 class BusRoute {
 public:
-    static shared_ptr<BusRoute> MakeBusRoute(const string& name, BusRouteDirection direction,
+    static unique_ptr<BusRoute> MakeBusRoute(const string& name,  bool is_roundtrip,
                                              const vector<shared_ptr<Stop>>& stop_list) {
-        BusRoute bus_route(name, direction, stop_list);
-        return make_shared<BusRoute>(move(bus_route));
+        BusRoute bus_route(name, is_roundtrip, stop_list);
+        return make_unique<BusRoute>(move(bus_route));
     }
 
-    BusRoute(const string& name, BusRouteDirection direction, const vector<shared_ptr<Stop>>& stop_list)
-      : direction(direction)
-      , name(name)
-      , length(0)
-      , total_stops_count(0)
-      , unique_stops_count(0)
-      , route(stop_list)
+    BusRoute(const string& name, bool is_roundtrip, const vector<shared_ptr<Stop>>& stop_list)
+        : is_roundtrip(is_roundtrip)
+        , name(name)
+        , length(0)
+        , total_stops_count(0)
+        , unique_stops_count(0)
+        , route(stop_list)
     {
         SetTotalStopsCount();
         SetUniqueStopsCount();
@@ -141,7 +133,7 @@ public:
         return os.str();
     }
 
-    BusRouteDirection direction;
+    bool is_roundtrip;
     string name;
     double length;
     size_t total_stops_count;
@@ -150,13 +142,10 @@ public:
 
 private:
     void SetTotalStopsCount() {
-        switch (direction) {
-            case (BusRouteDirection::ROUND):
-                total_stops_count = route.size();
-                break;
-            case (BusRouteDirection::ROTATE):
-                total_stops_count = (route.size() * 2) - 1;
-                break;
+        if (is_roundtrip) {
+            total_stops_count = route.size();
+        } else {
+            total_stops_count = (route.size() * 2) - 1;
         }
     }
 
@@ -169,20 +158,27 @@ private:
     }
 };
 
-
 class TransportManager {
 public:
     TransportManager() = default;
+
     void AddStop(const string& name, double latitude, double longitude) {
         if (!stops_dictonary_.count(name)) {
-            stops_dictonary_.insert({name, Stop::MakeStop(name, latitude, longitude)});
+            stops_dictonary_.insert({name, Stop::Create(name, latitude, longitude)});
         }
     }
-    void AddBus(const string& name, BusRouteDirection direction, const vector<string>& stop_list) {
 
+    void AddBus(const string& name, bool is_roundtrip, const vector<string>& stop_list) {
         if (!bus_routes_dictonary_.count(name)) {
-            bus_routes_dictonary_.insert({name, BusRoute::MakeBusRoute(name, direction, GetStopList(stop_list))});
+            bus_routes_dictonary_.insert({name, BusRoute::MakeBusRoute(name, is_roundtrip, GetStopList(stop_list))});
         }
+    }
+
+    const optional<Stop> GetStop(const string& name) const {
+        if (stops_dictonary_.count(name)) {
+            return *stops_dictonary_.at(name);
+        }
+        return nullopt;
     }
 
     shared_ptr<BusRoute> GetBus(const string& name) const {
@@ -204,7 +200,6 @@ public:
 private:
     unordered_map<string, shared_ptr<Stop>> stops_dictonary_;
     unordered_map<string, shared_ptr<BusRoute>> bus_routes_dictonary_;
-
 };
 
 
@@ -289,14 +284,15 @@ struct AddStopRequest : public ModifyRequest {
 };
 
 struct AddBusRequest : public ModifyRequest {
-    AddBusRequest() : ModifyRequest(Type::ADD_BUS) {}
+    AddBusRequest()
+        : ModifyRequest(Type::ADD_BUS)
+        , is_roundtrip(false) {}
     void ParseFrom(string_view input) override {
         string route_delimiter = " - ";
-        direction = BusRouteDirection::ROTATE;
         if (auto it = find(input.begin(), input.end(), '-');
             it == input.end()) {
             route_delimiter = " > ";
-            direction = BusRouteDirection::ROUND;
+            is_roundtrip = true;
         }
         name = ReadToken(input, ": ");
         const auto stop_view = SplitBy(input, route_delimiter);
@@ -304,11 +300,11 @@ struct AddBusRequest : public ModifyRequest {
     }
 
     void Process(TransportManager& manager) const override {
-        return manager.AddBus(name, direction, stop_list);
+        return manager.AddBus(name, is_roundtrip, stop_list);
     }
 
     string name;
-    BusRouteDirection direction;
+    bool is_roundtrip;
     vector<string> stop_list;
 };
 
@@ -391,22 +387,26 @@ array<vector<RequestHolder>, REQUESTS_TYPE_COUNT> ReadRequests(DataBaseMode mode
     return requests;
 }
 
-vector<ResponseHolder> ProcessRequests(const array<vector<RequestHolder>,
-                                       REQUESTS_TYPE_COUNT>& requests,
+vector<ResponseHolder> ProcessReadRequests(const array<vector<RequestHolder>, REQUESTS_TYPE_COUNT>& requests,
                                        TransportManager& manager) {
     vector<ResponseHolder> responses;
-    for (const auto& bucket : requests) {
-        for (const auto& request_holder : bucket) {
-            if (request_holder->type == Request::Type::GET_BUS) {
-                const auto& request = static_cast<const GetBusRequest&>(*request_holder);
+        for (const auto& bucket : requests) {
+            for (const auto& request_holder : bucket) {
+                const auto& request = dynamic_cast<const ReadRequest<ResponseHolder>&>(*request_holder);
                 responses.push_back(request.Process(manager));
-            } else {
-                const auto& request = static_cast<const ModifyRequest&>(*request_holder);
-                request.Process(manager);
             }
         }
-    }
     return responses;
+}
+
+void ProcessWriteRequests(const array<vector<RequestHolder>, REQUESTS_TYPE_COUNT>& requests,
+                                           TransportManager& manager) {
+    for (const auto& bucket : requests) {
+        for (const auto& request_holder : bucket) {
+            const auto& request = dynamic_cast<const ModifyRequest&>(*request_holder);
+            request.Process(manager);
+        }
+    }
 }
 
 ostream& operator<< (ostream& os, const ResponseHolder& response) {
@@ -420,69 +420,95 @@ void PrintResponses(const vector<ResponseHolder>& responses, ostream& stream = c
     }
 }
 
-void TestSmoke() {
-    std::istringstream is;
-    const std::string input =
-        "10\n"
-        "Stop Tolstopaltsevo: 55.611087, 37.20829\n"
-        "Stop Marushkino: 55.595884, 37.209755\n"
-        "Bus 256: Biryulyovo Zapadnoye > Biryusinka > Universam > Biryulyovo Tovarnaya > Biryulyovo Passazhirskaya > Biryulyovo Zapadnoye\n"
-        "Bus 750: Tolstopaltsevo - Marushkino - Rasskazovka\n"
-        "Stop Rasskazovka: 55.632761, 37.333324\n"
-        "Stop Biryulyovo Zapadnoye: 55.574371, 37.6517\n"
-        "Stop Biryusinka: 55.581065, 37.64839\n"
-        "Stop Universam: 55.587655, 37.645687\n"
-        "Stop Biryulyovo Tovarnaya: 55.592028, 37.653656\n"
-        "Stop Biryulyovo Passazhirskaya: 55.580999, 37.659164\n"
-        "3\n"
-        "Bus 256\n"
-        "Bus 750\n"
-        "Bus 751\n";
-    is.str(input);
-    TransportManager manager;
-    const auto requests_to_write = ReadRequests(DataBaseMode::WRITE, is);
-    const auto requests_to_read = ReadRequests(DataBaseMode::READ, is);
-    ProcessRequests(requests_to_write, manager);
-    const auto responses = ProcessRequests(requests_to_read, manager);
-    PrintResponses(responses);
-}
+namespace Tests {
+    void AddStop() {
+        TransportManager transport_manager;
+        transport_manager.AddStop("a", 1.0, 0.0);
+        const auto a = transport_manager.GetStop("a");
 
-void TestNotFoundResponse() {
-    std::istringstream is;
-    const std::string input =
-        "10\n"
-        "Stop Tolstopaltsevo: 55.611087, 37.20829\n"
-        "Stop Marushkino: 55.595884, 37.209755\n"
-        "Bus 256: Biryulyovo Zapadnoye > Biryusinka > Universam > Biryulyovo Tovarnaya > Biryulyovo Passazhirskaya > Biryulyovo Zapadnoye\n"
-        "Bus 750: Tolstopaltsevo - Marushkino - Rasskazovka\n"
-        "Stop Rasskazovka: 55.632761, 37.333324\n"
-        "Stop Biryulyovo Zapadnoye: 55.574371, 37.6517\n"
-        "Stop Biryusinka: 55.581065, 37.64839\n"
-        "Stop Universam: 55.587655, 37.645687\n"
-        "Stop Biryulyovo Tovarnaya: 55.592028, 37.653656\n"
-        "Stop Biryulyovo Passazhirskaya: 55.580999, 37.659164\n"
-        "1\n"
-        "Bus 750\n";
-    is.str(input);
-    TransportManager manager;
-    const auto requests_to_write = ReadRequests(DataBaseMode::WRITE, is);
-    const auto requests_to_read = ReadRequests(DataBaseMode::READ, is);
-    ProcessRequests(requests_to_write, manager);
-    const auto responses = ProcessRequests(requests_to_read, manager);
-    PrintResponses(responses);
+        ASSERT_EQUAL(a->name, "a")
+        ASSERT_EQUAL(a->latitude, 1.0)
+        ASSERT_EQUAL(a->longitude, 0.0)
+    }
 
-}
+    void AddBus() {
+        TransportManager transport_manager;
+        transport_manager.AddStop("a", 1.0, 0.0);
+        transport_manager.AddStop("b", 1.0, 0.0);
+        transport_manager.AddStop("c", 1.0, 0.0);
 
-void TestSimple() {
-    ASSERT(true)
-}
+        transport_manager.AddBus("759", true, {"a", "b", "c", "a"});
+        transport_manager.AddBus("000", false, {"a", "b", "c"});
+
+        const auto bus = transport_manager.GetBus("759");
+        const auto bus2 = transport_manager.GetBus("000");
+
+        ASSERT_EQUAL(bus->ToString(), "4 stops on route, 3 unique stops, 0 route length")
+        ASSERT_EQUAL(bus2->ToString(), "5 stops on route, 3 unique stops, 0 route length")
+    }
+
+    void Smoke() {
+        std::istringstream is;
+        const std::string input = "10\n"
+                                  "Stop Tolstopaltsevo: 55.611087, 37.20829\n"
+                                  "Stop Marushkino: 55.595884, 37.209755\n"
+                                  "Bus 256: Biryulyovo Zapadnoye > Biryusinka > Universam > Biryulyovo Tovarnaya > Biryulyovo Passazhirskaya > Biryulyovo Zapadnoye\n"
+                                  "Bus 750: Tolstopaltsevo - Marushkino - Rasskazovka\n"
+                                  "Stop Rasskazovka: 55.632761, 37.333324\n"
+                                  "Stop Biryulyovo Zapadnoye: 55.574371, 37.6517\n"
+                                  "Stop Biryusinka: 55.581065, 37.64839\n"
+                                  "Stop Universam: 55.587655, 37.645687\n"
+                                  "Stop Biryulyovo Tovarnaya: 55.592028, 37.653656\n"
+                                  "Stop Biryulyovo Passazhirskaya: 55.580999, 37.659164\n"
+                                  "3\n"
+                                  "Bus 256\n"
+                                  "Bus 750\n"
+                                  "Bus 751\n";
+        is.str(input);
+        TransportManager manager;
+        const auto requests_to_write = ReadRequests(DataBaseMode::WRITE, is);
+        const auto requests_to_read = ReadRequests(DataBaseMode::READ, is);
+        ProcessWriteRequests(requests_to_write, manager);
+        const auto responses = ProcessReadRequests(requests_to_read, manager);
+        PrintResponses(responses);
+    }
+
+    void NotFoundResponse() {
+        std::istringstream is;
+        const std::string input = "10\n"
+                                  "Stop Tolstopaltsevo: 55.611087, 37.20829\n"
+                                  "Stop Marushkino: 55.595884, 37.209755\n"
+                                  "Bus 256: Biryulyovo Zapadnoye > Biryusinka > Universam > Biryulyovo Tovarnaya > Biryulyovo Passazhirskaya > Biryulyovo Zapadnoye\n"
+                                  "Bus 750: Tolstopaltsevo - Marushkino - Rasskazovka\n"
+                                  "Stop Rasskazovka: 55.632761, 37.333324\n"
+                                  "Stop Biryulyovo Zapadnoye: 55.574371, 37.6517\n"
+                                  "Stop Biryusinka: 55.581065, 37.64839\n"
+                                  "Stop Universam: 55.587655, 37.645687\n"
+                                  "Stop Biryulyovo Tovarnaya: 55.592028, 37.653656\n"
+                                  "Stop Biryulyovo Passazhirskaya: 55.580999, 37.659164\n"
+                                  "1\n"
+                                  "Bus 750\n";
+        is.str(input);
+        TransportManager manager;
+        const auto requests_to_write = ReadRequests(DataBaseMode::WRITE, is);
+        const auto requests_to_read = ReadRequests(DataBaseMode::READ, is);
+        ProcessWriteRequests(requests_to_write, manager);
+        const auto responses = ProcessReadRequests(requests_to_read, manager);
+        PrintResponses(responses);
+    }
+
+    void Simple() {
+        ASSERT(true)
+    }
+} // namespace tests;
 
 void TestAll() {
     TestRunner test_runner;
-    RUN_TEST(test_runner, TestSimple);
-//    RUN_TEST(test_runner, TestNotFoundResponse);
-    RUN_TEST(test_runner, TestSmoke);
-
+    RUN_TEST(test_runner, Tests::Simple);
+    RUN_TEST(test_runner, Tests::AddBus);
+    RUN_TEST(test_runner, Tests::AddStop);
+    RUN_TEST(test_runner, Tests::Smoke);
+    RUN_TEST(test_runner, Tests::NotFoundResponse);
 }
 
 int main() {
