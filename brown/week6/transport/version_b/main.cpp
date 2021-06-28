@@ -14,9 +14,19 @@ using namespace std;
 
 bool AreDoubleSame(double left, double right)
 {
-    return std::fabs(left - right) < 1e-7;
+    return std::fabs(left - right) < 1e-5;
 }
 
+
+string_view Strip(string_view s) {
+    while (!s.empty() && isspace(s.front())) {
+        s.remove_prefix(1);
+    }
+    while (!s.empty() && isspace(s.back())) {
+        s.remove_suffix(1);
+    }
+    return s;
+}
 
 pair<string_view, optional<string_view>> SplitTwoStrict(string_view s, string_view delimiter = " ") {
     const size_t pos = s.find(delimiter);
@@ -51,7 +61,7 @@ vector<string_view> SplitBy(string_view s, string_view delimiter) {
     vector<string_view> result;
     while (!s.empty()) {
         size_t pos = s.find(delimiter);
-        result.push_back(s.substr(0, pos));
+        result.push_back(Strip(s.substr(0, pos)));
         s.remove_prefix(pos != string::npos ? pos + delimiter.length() : s.size());
     }
     return result;
@@ -74,6 +84,10 @@ public:
 public:
 
 };
+
+bool operator==(const Point& left, const Point& right) {
+    return std::tie(left.latitude, left.longitude) == std::tie(right.latitude, right.longitude);
+}
 
 ostream& operator<< (ostream& os, const Point& point) {
     os << point.latitude << " " << point.longitude;
@@ -175,22 +189,32 @@ private:
     }
 
     void ComputeRouteLength() {
-         auto first = route.begin();
-         for (auto it = route.begin() + 1; it != route.end(); ++it) {
-             length += LengthBetweenPoints(*first, *it);
-             first = it;
-         }
+        length = ComputeOneLineLength(route.begin(), route.end());
          if (!is_roundtrip) {
-             length *= 2;
+             length += ComputeOneLineLength(route.rbegin(), route.rend());;
          }
     }
 public:
     static double LengthBetweenPoints(shared_ptr<Stop> left, shared_ptr<Stop> right) {
+//        if (left->point == right->point) {
+//            return 0;
+//        }
         auto result = acos((sin(left->point.latitude) * sin(right->point.latitude)) +
                         (cos(left->point.latitude) * cos(right->point.latitude) *
              cos(fabs(left->point.longitude - right->point.longitude)))
         ) * 6371000;
         return result;
+    }
+
+    template <typename It>
+    static double ComputeOneLineLength(It begin, It end) {
+        double length = 0;
+        auto first = begin;
+        for (auto it = begin + 1; it != end; ++it) {
+            length += LengthBetweenPoints(*first, *it);
+            first = it;
+        }
+        return length;
     }
 };
 
@@ -308,10 +332,11 @@ ResponseHolder MakeResponse(const string& type, const string& name, string&& mes
     return make_unique<Response>(move(response));
 }
 
+
 struct AddStopRequest : public ModifyRequest {
     AddStopRequest() : ModifyRequest(Type::ADD_STOP) {}
     void ParseFrom(string_view input) override {
-        name = ReadToken(input, ":");
+        name = Strip(ReadToken(input, ":"));
         latitude = stod(string(ReadToken(input, ",")));
         longitude = stod(string(input));
     }
@@ -330,14 +355,14 @@ struct AddBusRequest : public ModifyRequest {
         : ModifyRequest(Type::ADD_BUS)
         , is_roundtrip(false) {}
     void ParseFrom(string_view input) override {
+        name = Strip(ReadToken(input, ": "));
         string route_delimiter = " - ";
         if (auto it = find(input.begin(), input.end(), '-');
             it == input.end()) {
             route_delimiter = " > ";
             is_roundtrip = true;
         }
-        name = ReadToken(input, ": ");
-        const auto stop_view = SplitBy(input, route_delimiter);
+        const auto stop_view = SplitBy(Strip(input), route_delimiter);
         stop_list.insert(stop_list.end(), stop_view.begin(), stop_view.end());
     }
 
@@ -353,7 +378,7 @@ struct AddBusRequest : public ModifyRequest {
 struct GetBusRequest : public ReadRequest<ResponseHolder> {
     GetBusRequest() : ReadRequest<ResponseHolder>(Type::GET_BUS) {}
     void ParseFrom(string_view input) override {
-        name = input;
+        name = Strip(input);
     }
 
     ResponseHolder Process(const TransportManager& manager) const override {
@@ -370,7 +395,7 @@ struct GetBusRequest : public ReadRequest<ResponseHolder> {
 struct GetStopRequest : public ReadRequest<ResponseHolder> {
     GetStopRequest() : ReadRequest<ResponseHolder>(Type::GET_STOP) {}
     void ParseFrom(string_view input) override {
-        name = input;
+        name = Strip(input);
     }
 
     ResponseHolder Process(const TransportManager& manager) const override {
@@ -483,6 +508,9 @@ void PrintResponses(const vector<ResponseHolder>& responses, ostream& stream = c
 }
 
 namespace Tests {
+    void CheckStrip() {
+        ASSERT_EQUAL("as df", Strip({"   as df   "}));
+    }
     void AddStop() {
         TransportManager transport_manager;
         transport_manager.AddStop("a", 1.0, 0.0);
@@ -493,21 +521,94 @@ namespace Tests {
         ASSERT(AreDoubleSame(a->point.longitude, 0.0))
     }
 
+    void AddStopSpaces() {
+        const double x = 55.611087;
+        const double y = 37.20829;
+        TransportManager transport_manager;
+        transport_manager.AddStop("a", 1, 1);
+        transport_manager.AddStop(" a", 2, 2);
+        transport_manager.AddStop("a ", 3, 3);
+        transport_manager.AddStop(" a ", 4, 4);
+        transport_manager.AddStop("a a", 5, 5);
+        transport_manager.AddStop("a   a", 6, 6);
+
+        ASSERT_EQUAL(to_string(transport_manager.GetStop("a")->point.latitude), "0.017453");
+        ASSERT_EQUAL(to_string(transport_manager.GetStop(" a")->point.latitude), "0.017453");
+        ASSERT_EQUAL(to_string(transport_manager.GetStop("a ")->point.latitude), "0.017453");
+        ASSERT_EQUAL(to_string(transport_manager.GetStop(" a ")->point.latitude), "0.017453");
+        ASSERT_EQUAL(to_string(transport_manager.GetStop("a a")->point.latitude), "0.017453");
+        ASSERT_EQUAL(to_string(transport_manager.GetStop("a   a")->point.latitude), "0.017453");
+
+
+    }
+
     void AddBus() {
         TransportManager transport_manager;
-        transport_manager.AddStop("a", 55.611087, 37.20829);
-        transport_manager.AddStop("b", 55.595884, 37.209755);
-        transport_manager.AddStop("c", 55.632761, 37.333324);
+        transport_manager.AddStop("a a", 55.611087, 37.20829);
+        transport_manager.AddStop("b b", 55.595884, 37.209755);
+        transport_manager.AddStop("c c", 55.632761, 37.333324);
+        transport_manager.AddStop("d d", 55.632761, 37.333324);
 
-        transport_manager.AddBus("759", true, {"a", "b", "c", "a"});
-        transport_manager.AddBus("000", false, {"a", "b", "c"});
+        transport_manager.AddBus("759", true, {"a a", "b b", "c c", "a a"});
+        transport_manager.AddBus("000", false, {"a a", "b b", "c c"});
 
         const auto bus = transport_manager.GetBus("759");
         const auto bus2 = transport_manager.GetBus("000");
 
         ASSERT_EQUAL(bus->ToString(), "4 stops on route, 3 unique stops, 18681.8 route length")
         ASSERT_EQUAL(bus2->ToString(), "5 stops on route, 3 unique stops, 20939.5 route length")
+
+        const auto stop_a = transport_manager.GetStop("a a");
+        const auto stop_d = transport_manager.GetStop("d d");
+        const auto stop_f = transport_manager.GetStop("f");
+        const set<string> expected_buses = {"000", "759"};
+        ASSERT_EQUAL(stop_a->buses, expected_buses);
+        ASSERT_EQUAL(stop_d->buses, set<string>{});
+        ASSERT(!stop_f.has_value());
     }
+
+    void LengthBetweenSamePoints() {
+        const double x = 55.611087;
+        const double y = 37.20829;
+
+        auto len = BusRoute::LengthBetweenPoints(make_shared<Stop>("a", x, y),
+            make_shared<Stop>("b", x, y));
+
+        ASSERT_EQUAL(len, 0);
+    }
+
+
+    void AddBusSameStops() {
+        TransportManager transport_manager;
+        const double x = 55.611087;
+        const double y = 37.20829;
+        const string name = "a";
+        transport_manager.AddStop(name, x, y);
+        transport_manager.AddStop(name, x, y);
+        transport_manager.AddStop(name, x, y);
+
+        transport_manager.AddBus("111", true, {"a", "a", "a"});
+        transport_manager.AddBus("222", false, {"a", "a", "a"});
+
+        const auto bus = transport_manager.GetBus("111");
+        const auto bus2 = transport_manager.GetBus("222");
+
+        ASSERT_EQUAL(bus->ToString(), "3 stops on route, 1 unique stops, 0 route length")
+        ASSERT_EQUAL(bus2->ToString(), "5 stops on route, 1 unique stops, 0 route length")
+//
+//
+//        const auto stop_a = transport_manager.GetStop("a a");
+//        const auto stop_d = transport_manager.GetStop("d d");
+//        const auto stop_f = transport_manager.GetStop("f");
+//        const set<string> expected_buses = {"000", "759"};
+//        ASSERT_EQUAL(stop_a->buses, expected_buses);
+//        ASSERT_EQUAL(stop_d->buses, set<string>{});
+//        ASSERT(!stop_f.has_value());
+    }
+
+
+
+
 
     void Smoke() {
         std::istringstream is;
@@ -542,23 +643,60 @@ namespace Tests {
                               "Stop Prazhskaya: no buses\n"
                               "Stop Biryulyovo Zapadnoye: buses 256 828\n";
 
-        ostringstream os;
+        ostringstream out;
 
         TransportManager manager;
         const auto requests_to_write = ReadRequests(DataBaseMode::WRITE, is);
         const auto requests_to_read = ReadRequests(DataBaseMode::READ, is);
         ProcessWriteRequests(requests_to_write, manager);
         const auto responses = ProcessReadRequests(requests_to_read, manager);
-        PrintResponses(responses, os);
-        auto result = os.str();
+        PrintResponses(responses, out);
+        auto result = out.str();
         ASSERT_EQUAL(result, output)
     }
+
+    void FuzzNames() {
+        std::istringstream is;
+        const std::string input = "4\n"
+                                  "Bus №666-кольцевой автобус: пердово > новые васюки > пердово\n"
+                                  "Bus №000>экспресс: пердово - новые васюки\n"
+                                  "Stop пердово: 55.611087, 37.20829\n"
+                                  "Stop новые васюки: 55.595884, 37.209755\n"
+                                  "4\n"
+                                  "Bus №666-кольцевой автобус\n"
+                                  "Bus №000>экспресс\n"
+                                  "Stop пердово\n"
+                                  "Stop новые васюки\n";
+
+        const string output = "Bus №666-кольцевой автобус: 3 stops on route, 2 unique stops, 3386 route length\n"
+                              "Bus №000>экспресс: 3 stops on route, 2 unique stops, 3386 route length\n"
+                              "Stop пердово: buses №000>экспресс №666-кольцевой автобус\n"
+                              "Stop новые васюки: buses №000>экспресс №666-кольцевой автобус\n";
+        is.str(input);
+        ostringstream out;
+
+        TransportManager manager;
+        const auto requests_to_write = ReadRequests(DataBaseMode::WRITE, is);
+        const auto requests_to_read = ReadRequests(DataBaseMode::READ, is);
+        ProcessWriteRequests(requests_to_write, manager);
+        const auto responses = ProcessReadRequests(requests_to_read, manager);
+        PrintResponses(responses, out);
+        auto result = out.str();
+        ASSERT_EQUAL(result, output)
+    }
+
+
 }
 void TestAll() {
     TestRunner test_runner;
     RUN_TEST(test_runner, Tests::AddBus);
     RUN_TEST(test_runner, Tests::AddStop);
     RUN_TEST(test_runner, Tests::Smoke);
+    RUN_TEST(test_runner, Tests::AddBusSameStops);
+    RUN_TEST(test_runner, Tests::LengthBetweenSamePoints);
+//    RUN_TEST(test_runner, Tests::AddStopSpaces);
+    RUN_TEST(test_runner, Tests::CheckStrip);
+    RUN_TEST(test_runner, Tests::FuzzNames);
 }
 
 int main() {
