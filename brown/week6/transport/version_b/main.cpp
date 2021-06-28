@@ -93,10 +93,27 @@ public:
         , point(lat, lon) {
 
     }
+    string ToString() const {
+        ostringstream os;
+        if (buses.empty()) {
+            return "no buses";
+        }
+        os << "buses ";
+        bool first = true;
+        for (const auto& bus : buses) {
+            if (!first) {
+                os << " ";
+            }
+            os << bus;
+            first = false;
+        }
+        return os.str();
+    }
 
 public:
     string name;
     Point point;
+    set<string> buses;
 };
 
 ostream& operator<< (ostream& os, const Stop& stop) {
@@ -190,6 +207,9 @@ public:
     void AddBus(const string& name, bool is_roundtrip, const vector<string>& stop_list) {
         if (!bus_routes_dictonary_.count(name)) {
             bus_routes_dictonary_.insert({name, BusRoute::MakeBusRoute(name, is_roundtrip, GetStopList(stop_list))});
+            for (auto& stop : bus_routes_dictonary_[name]->route) {
+                stop->buses.insert(name);
+            }
         }
     }
 
@@ -231,6 +251,7 @@ struct Request {
         ADD_STOP,
         ADD_BUS,
         GET_BUS,
+        GET_STOP,
         LAST_,
     };
 
@@ -253,6 +274,7 @@ RequestMap STR_TO_MODIFY_REQUEST_TYPE = {
 
 RequestMap STR_TO_READ_REQUEST_TYPE = {
     {"Bus", Request::Type::GET_BUS},
+    {"Stop", Request::Type::GET_STOP},
 };
 
 enum class DataBaseMode {
@@ -275,13 +297,14 @@ struct ModifyRequest : Request {
 };
 
 struct Response {
+    string object_type;
     string object_name;
     string message;
 };
 using ResponseHolder = unique_ptr<Response>;
 
-ResponseHolder MakeResponse(const string& name, string&& message) {
-    Response response{name, move(message)};
+ResponseHolder MakeResponse(const string& type, const string& name, string&& message) {
+    Response response{type, name, move(message)};
     return make_unique<Response>(move(response));
 }
 
@@ -328,7 +351,7 @@ struct AddBusRequest : public ModifyRequest {
 };
 
 struct GetBusRequest : public ReadRequest<ResponseHolder> {
-    GetBusRequest() : ReadRequest<ResponseHolder>(Type::ADD_BUS) {}
+    GetBusRequest() : ReadRequest<ResponseHolder>(Type::GET_BUS) {}
     void ParseFrom(string_view input) override {
         name = input;
     }
@@ -336,11 +359,29 @@ struct GetBusRequest : public ReadRequest<ResponseHolder> {
     ResponseHolder Process(const TransportManager& manager) const override {
         const auto bus_route = manager.GetBus(name);
         if (bus_route != nullptr) {
-            return MakeResponse(name, bus_route->ToString());
+            return MakeResponse("Bus", name, bus_route->ToString());
         } else {
-            return MakeResponse(name, "not found");
+            return MakeResponse("Bus", name, "not found");
         }
     }
+    string name;
+};
+
+struct GetStopRequest : public ReadRequest<ResponseHolder> {
+    GetStopRequest() : ReadRequest<ResponseHolder>(Type::GET_STOP) {}
+    void ParseFrom(string_view input) override {
+        name = input;
+    }
+
+    ResponseHolder Process(const TransportManager& manager) const override {
+        const auto stop = manager.GetStop(name);
+        if (stop.has_value()) {
+            return MakeResponse("Stop", name, stop->ToString());
+        } else {
+            return MakeResponse("Stop", name, "not found");
+        }
+    }
+
     string name;
 };
 
@@ -352,6 +393,8 @@ RequestHolder Request::Create(Request::Type type) {
             return make_unique<AddBusRequest>();
         case Request::Type::GET_BUS:
             return make_unique<GetBusRequest>();
+        case Request::Type::GET_STOP:
+            return make_unique<GetStopRequest>();
         default:
             return nullptr;
     }
@@ -429,7 +472,7 @@ void ProcessWriteRequests(const array<vector<RequestHolder>, REQUESTS_TYPE_COUNT
 }
 
 ostream& operator<< (ostream& os, const ResponseHolder& response) {
-    os << "Bus " << response->object_name << ": " << response->message;
+    os << response->object_type << " " << response->object_name << ": " << response->message;
     return os;
 }
 
@@ -468,26 +511,36 @@ namespace Tests {
 
     void Smoke() {
         std::istringstream is;
-        const std::string input = "10\n"
-                                  "Stop Tolstopaltsevo: 55.611087, 37.20829\n"
-                                  "Stop Marushkino: 55.595884, 37.209755\n"
-                                  "Bus 256: Biryulyovo Zapadnoye > Biryusinka > Universam > Biryulyovo Tovarnaya > Biryulyovo Passazhirskaya > Biryulyovo Zapadnoye\n"
-                                  "Bus 750: Tolstopaltsevo - Marushkino - Rasskazovka\n"
-                                  "Stop Rasskazovka: 55.632761, 37.333324\n"
-                                  "Stop Biryulyovo Zapadnoye: 55.574371, 37.6517\n"
-                                  "Stop Biryusinka: 55.581065, 37.64839\n"
-                                  "Stop Universam: 55.587655, 37.645687\n"
-                                  "Stop Biryulyovo Tovarnaya: 55.592028, 37.653656\n"
-                                  "Stop Biryulyovo Passazhirskaya: 55.580999, 37.659164\n"
-                                  "3\n"
-                                  "Bus 256\n"
-                                  "Bus 750\n"
-                                  "Bus 751\n";
+        const std::string input = "13\n"
+            "Stop Tolstopaltsevo: 55.611087, 37.20829\n"
+            "Stop Marushkino: 55.595884, 37.209755\n"
+            "Bus 256: Biryulyovo Zapadnoye > Biryusinka > Universam > Biryulyovo Tovarnaya > Biryulyovo Passazhirskaya > Biryulyovo Zapadnoye\n"
+            "Bus 750: Tolstopaltsevo - Marushkino - Rasskazovka\n"
+            "Stop Rasskazovka: 55.632761, 37.333324\n"
+            "Stop Biryulyovo Zapadnoye: 55.574371, 37.6517\n"
+            "Stop Biryusinka: 55.581065, 37.64839\n"
+            "Stop Universam: 55.587655, 37.645687\n"
+            "Stop Biryulyovo Tovarnaya: 55.592028, 37.653656\n"
+            "Stop Biryulyovo Passazhirskaya: 55.580999, 37.659164\n"
+            "Bus 828: Biryulyovo Zapadnoye > Universam > Rossoshanskaya ulitsa > Biryulyovo Zapadnoye\n"
+            "Stop Rossoshanskaya ulitsa: 55.595579, 37.605757\n"
+            "Stop Prazhskaya: 55.611678, 37.603831\n"
+            "6\n"
+            "Bus 256\n"
+            "Bus 750\n"
+            "Bus 751\n"
+            "Stop Samara\n"
+            "Stop Prazhskaya\n"
+            "Stop Biryulyovo Zapadnoye\n";
+
         is.str(input);
 
         const string output = "Bus 256: 6 stops on route, 5 unique stops, 4371.02 route length\n"
                               "Bus 750: 5 stops on route, 3 unique stops, 20939.5 route length\n"
-                              "Bus 751: not found\n";
+                              "Bus 751: not found\n"
+                              "Stop Samara: not found\n"
+                              "Stop Prazhskaya: no buses\n"
+                              "Stop Biryulyovo Zapadnoye: buses 256 828\n";
 
         ostringstream os;
 
