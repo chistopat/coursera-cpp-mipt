@@ -80,3 +80,6 @@ add_executable(transport_b
         brown/week6/transport/version_b/main.cpp
         brown/week6/transport/version_b/test_runner.h)
 
+add_executable(transport_c
+        brown/week6/transport/version_c/main.cpp
+        brown/week6/transport/version_c/test_runner.h brown/week6/transport/version_c/parse.h brown/week6/transport/version_c/point.h brown/week6/transport/version_c/stop.h brown/week6/transport/version_c/bus_route.h brown/week6/transport/version_c/transport_manager.h brown/week6/transport/version_c/request.h brown/week6/transport/version_c/response.h brown/week6/transport/version_c/utils.h brown/week6/transport/version_c/tests.h brown/week6/transport/version_c/segment.h brown/week6/transport/version_c/router.h)
