@@ -9,6 +9,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <variant>
 
 using namespace std;
 
@@ -196,9 +197,9 @@ private:
     }
 public:
     static double LengthBetweenPoints(shared_ptr<Stop> left, shared_ptr<Stop> right) {
-//        if (left->point == right->point) {
-//            return 0;
-//        }
+        if (left->point == right->point) {
+            return 0;
+        }
         auto result = acos((sin(left->point.latitude) * sin(right->point.latitude)) +
                         (cos(left->point.latitude) * cos(right->point.latitude) *
              cos(fabs(left->point.longitude - right->point.longitude)))
@@ -444,7 +445,7 @@ optional<Request::Type> ConvertRequestTypeFromString(string_view type_str, DataB
 }
 
 RequestHolder ParseRequest(DataBaseMode mode, string_view request_str) {
-    const auto request_type = ConvertRequestTypeFromString(ReadToken(request_str), mode);
+    const auto request_type = ConvertRequestTypeFromString(Strip(ReadToken(request_str)), mode);
     if (!request_type) {
         return nullptr;
     }
@@ -456,39 +457,61 @@ RequestHolder ParseRequest(DataBaseMode mode, string_view request_str) {
 
     return request;
 }
-array<vector<RequestHolder>, REQUESTS_TYPE_COUNT> ReadRequests(DataBaseMode mode, istream& in_stream = cin) {
+
+using RequestGrid = array<vector<RequestHolder>, REQUESTS_TYPE_COUNT>;
+using RequestList = vector<RequestHolder>;
+variant<RequestList, RequestGrid> ReadRequests(DataBaseMode mode,
+                                   ostringstream& log,
+                                   istream& in_stream = cin,
+                                   bool debug = false,
+                                   string deadb33f = "") {
     const auto request_count = ReadNumberOnLine<size_t>(in_stream);
 
-    array<vector<RequestHolder>, REQUESTS_TYPE_COUNT> requests;
-    for (auto& bucket : requests) {
+    log << request_count << '\n';
+
+    RequestList request_list;
+    RequestGrid request_grid;
+    for (auto& bucket : request_grid) {
         bucket.reserve(request_count);
     }
 
     for (size_t i = 0; i < request_count; ++i) {
         string request_str;
         getline(in_stream, request_str);
+        log << request_str << "\n";
         if (auto request = ParseRequest(mode, request_str)) {
-            requests[static_cast<size_t>(request->type)].push_back(move(request));
-        }
-    }
-    return requests;
-}
+            if (mode == DataBaseMode::READ) {
+                request_list.push_back(move(request));
+            } else {
+                request_grid[static_cast<size_t>(request->type)].push_back(move(request));
 
-vector<ResponseHolder> ProcessReadRequests(const array<vector<RequestHolder>, REQUESTS_TYPE_COUNT>& requests,
-                                       TransportManager& manager) {
-    vector<ResponseHolder> responses;
-        for (const auto& bucket : requests) {
-            for (const auto& request_holder : bucket) {
-                const auto& request = dynamic_cast<const ReadRequest<ResponseHolder>&>(*request_holder);
-                responses.push_back(request.Process(manager));
             }
         }
+    }
+    if (const auto log_str = log.str();
+        mode == DataBaseMode::READ and debug and log_str.find(deadb33f) != string::npos) {
+        cerr << log_str << '\n';
+        throw runtime_error(log_str);
+    }
+    if (mode == DataBaseMode::READ) {
+        return request_list;
+    }
+    return request_grid;
+}
+
+vector<ResponseHolder> ProcessReadRequests(const variant<RequestList, RequestGrid>& requests,
+                                       TransportManager& manager) {
+    vector<ResponseHolder> responses;
+    for (const auto& request_holder : get<RequestList>(requests)) {
+            const auto& request = dynamic_cast<const ReadRequest<ResponseHolder>&>(*request_holder);
+            responses.push_back(request.Process(manager));
+    }
     return responses;
 }
 
-void ProcessWriteRequests(const array<vector<RequestHolder>, REQUESTS_TYPE_COUNT>& requests,
+void ProcessWriteRequests(const variant<RequestList, RequestGrid>& requests,
                                            TransportManager& manager) {
-    for (const auto& bucket : requests) {
+    for (const auto& bucket : get<RequestGrid>(requests)) {
         for (const auto& request_holder : bucket) {
             const auto& request = dynamic_cast<const ModifyRequest&>(*request_holder);
             request.Process(manager);
@@ -508,6 +531,16 @@ void PrintResponses(const vector<ResponseHolder>& responses, ostream& stream = c
 }
 
 namespace Tests {
+    void SetUp(istream& in, ostream& out) {
+        ostringstream log;
+        TransportManager manager;
+        const auto requests_to_write = ReadRequests(DataBaseMode::WRITE, log, in);
+        const auto requests_to_read = ReadRequests(DataBaseMode::READ,log,  in);
+        ProcessWriteRequests(requests_to_write, manager);
+        const auto responses = ProcessReadRequests(requests_to_read, manager);
+        PrintResponses(responses, out);
+    }
+
     void CheckStrip() {
         ASSERT_EQUAL("as df", Strip({"   as df   "}));
     }
@@ -645,12 +678,7 @@ namespace Tests {
 
         ostringstream out;
 
-        TransportManager manager;
-        const auto requests_to_write = ReadRequests(DataBaseMode::WRITE, is);
-        const auto requests_to_read = ReadRequests(DataBaseMode::READ, is);
-        ProcessWriteRequests(requests_to_write, manager);
-        const auto responses = ProcessReadRequests(requests_to_read, manager);
-        PrintResponses(responses, out);
+        SetUp(is, out);
         auto result = out.str();
         ASSERT_EQUAL(result, output)
     }
@@ -663,29 +691,43 @@ namespace Tests {
                                   "Stop пердово: 55.611087, 37.20829\n"
                                   "Stop новые васюки: 55.595884, 37.209755\n"
                                   "4\n"
-                                  "Bus №666-кольцевой автобус\n"
-                                  "Bus №000>экспресс\n"
                                   "Stop пердово\n"
-                                  "Stop новые васюки\n";
+                                  "Bus №666-кольцевой автобус\n"
+                                  "Stop новые васюки\n"
+                                  "Bus №000>экспресс\n";
 
-        const string output = "Bus №666-кольцевой автобус: 3 stops on route, 2 unique stops, 3386 route length\n"
-                              "Bus №000>экспресс: 3 stops on route, 2 unique stops, 3386 route length\n"
-                              "Stop пердово: buses №000>экспресс №666-кольцевой автобус\n"
-                              "Stop новые васюки: buses №000>экспресс №666-кольцевой автобус\n";
+
+        const string output = "Stop пердово: buses №000>экспресс №666-кольцевой автобус\n"
+                              "Bus №666-кольцевой автобус: 3 stops on route, 2 unique stops, 3386 route length\n"
+                              "Stop новые васюки: buses №000>экспресс №666-кольцевой автобус\n"
+                              "Bus №000>экспресс: 3 stops on route, 2 unique stops, 3386 route length\n";
         is.str(input);
         ostringstream out;
 
-        TransportManager manager;
-        const auto requests_to_write = ReadRequests(DataBaseMode::WRITE, is);
-        const auto requests_to_read = ReadRequests(DataBaseMode::READ, is);
-        ProcessWriteRequests(requests_to_write, manager);
-        const auto responses = ProcessReadRequests(requests_to_read, manager);
-        PrintResponses(responses, out);
+        SetUp(is, out);
         auto result = out.str();
         ASSERT_EQUAL(result, output)
     }
 
+    void TestEmptyBase() {
+        const std::string input = "0\n"
+                                  "2\n"
+                                  "Stop пердово\n"
+                                  "Stop новые васюки\n";
 
+        const string output = "Stop пердово: not found\n"
+                              "Stop новые васюки: not found\n";
+        std::istringstream is;
+        std::ostringstream os;
+        is.str(input);
+
+        SetUp(is, os);
+        auto result = os.str();
+        ASSERT_EQUAL(result, output)
+
+
+
+    }
 }
 void TestAll() {
     TestRunner test_runner;
@@ -697,14 +739,18 @@ void TestAll() {
 //    RUN_TEST(test_runner, Tests::AddStopSpaces);
     RUN_TEST(test_runner, Tests::CheckStrip);
     RUN_TEST(test_runner, Tests::FuzzNames);
+    RUN_TEST(test_runner, Tests::TestEmptyBase);
 }
 
+
 int main() {
-//    TestAll();
+    const bool DEBUG = false;
+    TestAll();
     cout.precision(6);
     TransportManager manager;
-    const auto requests_to_write = ReadRequests(DataBaseMode::WRITE, cin);
-    const auto requests_to_read = ReadRequests(DataBaseMode::READ, cin);
+    ostringstream log;
+    const auto requests_to_write = ReadRequests(DataBaseMode::WRITE, log, cin);
+    const auto requests_to_read = ReadRequests(DataBaseMode::READ, log, cin, DEBUG, "vW1R0hGBlnaSNo6M58N3");
     ProcessWriteRequests(requests_to_write, manager);
     const auto responses = ProcessReadRequests(requests_to_read, manager);
     PrintResponses(responses, cout);
