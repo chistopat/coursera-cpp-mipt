@@ -19,6 +19,9 @@ public:
             const auto& from = name;
             for (const auto& [to, distance] : distanceMap.values) {
                 router_.AddDistance(from, to, distance);
+                if (!router_.GetDistance(to, from).has_value()) {
+                    router_.AddDistance(to, from, distance);
+                }
             }
         }
     }

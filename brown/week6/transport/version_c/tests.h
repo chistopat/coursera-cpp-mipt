@@ -141,7 +141,7 @@ namespace Tests {
                               "Stop Biryulyovo Zapadnoye: buses 256 828\n";
 
         ostringstream out;
-
+        out.precision(6);
         SetUp(is, out);
         auto result = out.str();
         ASSERT_EQUAL(result, output)

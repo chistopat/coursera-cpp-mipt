@@ -11,10 +11,10 @@ struct Distance {
     int by_road = 0;
     double by_geo = 0;
 
-    Distance& operator+=(const Distance& other) {
-        this->by_geo += other.by_geo;
-        this->by_road += other.by_road;
-        return *this;
+    friend Distance& operator+=(Distance& left,  const Distance& right) {
+        left.by_geo += right.by_geo;
+        left.by_road += right.by_road;
+        return left;
     }
 };
 
@@ -46,7 +46,7 @@ public:
         os << total_stops_count << " stops on route, "
            << unique_stops_count << " unique stops, "
            << distance_.by_road <<  " route length, "
-           << distance_.by_road / distance_.by_geo << " courvature";
+           << distance_.by_road / distance_.by_geo << " curvature";
         return os.str();
     }
 
@@ -82,6 +82,7 @@ private:
         distance_ = ComputeOneLineLength(route.begin(), route.end());
         if (!is_roundtrip) {
             distance_ += ComputeOneLineLength(route.rbegin(), route.rend());
+            ;;
         }
     }
 public:
