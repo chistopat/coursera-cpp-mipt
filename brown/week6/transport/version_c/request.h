@@ -3,6 +3,7 @@
 #include "response.h"
 #include "parse.h"
 #include "segment.h"
+#include "distance_map.h"
 
 #include <algorithm>
 using namespace std;
@@ -68,17 +69,17 @@ struct AddStopRequest : public ModifyRequest {
         name = Strip(ReadToken(input, ":"));
         latitude = stod(string(ReadToken(input, ",")));
         longitude = stod(string(ReadToken(input, ",")));
-
+        distance_map = DistanceMap::FromString(input);
     }
 
     void Process(TransportManager& manager) const override {
-        return manager.AddStop(name, latitude, longitude);
+        return manager.AddStop(name, latitude, longitude, distance_map);
     }
 
     string name;
     double latitude;
     double longitude;
-    vector<shared_ptr<Segment>> distances;
+    DistanceMap distance_map;
 };
 
 struct AddBusRequest : public ModifyRequest {

@@ -3,24 +3,38 @@
 #include <cmath>
 #include <memory>
 
+#include "router.h"
+
 using namespace std;
+
+struct Distance {
+    int by_road = 0;
+    double by_geo = 0;
+
+    Distance& operator+=(const Distance& other) {
+        this->by_geo += other.by_geo;
+        this->by_road += other.by_road;
+        return *this;
+    }
+};
+
 
 class BusRoute {
 public:
     static unique_ptr<BusRoute> MakeBusRoute(const string& name,  bool is_roundtrip,
-                                             const vector<shared_ptr<Stop>>& stop_list) {
-        BusRoute bus_route(name, is_roundtrip, stop_list);
+                                             const vector<shared_ptr<Stop>>& stop_list,
+                                             const Router& router) {
+        BusRoute bus_route(name, is_roundtrip, stop_list, router);
         return make_unique<BusRoute>(move(bus_route));
     }
 
-    BusRoute(const string& name, bool is_roundtrip, const vector<shared_ptr<Stop>>& stop_list)
+    BusRoute(const string& name, bool is_roundtrip, const vector<shared_ptr<Stop>>& stop_list, const Router& router)
         : is_roundtrip(is_roundtrip)
         , name(name)
-        , length(0)
-        , courvature(0)
         , total_stops_count(0)
         , unique_stops_count(0)
         , route(stop_list)
+        , router_(router)
     {
         ComputeRouteLength();
         SetTotalStopsCount();
@@ -31,20 +45,21 @@ public:
         ostringstream os;
         os << total_stops_count << " stops on route, "
            << unique_stops_count << " unique stops, "
-           << length <<  " route length";
+           << distance_.by_road <<  " route length, "
+           << distance_.by_road / distance_.by_geo << " courvature";
         return os.str();
     }
 
     bool is_roundtrip;
     string name;
-    double length;
-    double courvature;
     size_t total_stops_count;
     size_t unique_stops_count;
     vector<shared_ptr<Stop>> route;
+    Distance distance_;
+
 
 private:
-
+    const Router& router_;
 
 private:
     void SetTotalStopsCount() {
@@ -64,9 +79,9 @@ private:
     }
 
     void ComputeRouteLength() {
-        length = ComputeOneLineLength(route.begin(), route.end());
+        distance_ = ComputeOneLineLength(route.begin(), route.end());
         if (!is_roundtrip) {
-            length += ComputeOneLineLength(route.rbegin(), route.rend());
+            distance_ += ComputeOneLineLength(route.rbegin(), route.rend());
         }
     }
 public:
@@ -81,14 +96,26 @@ public:
         return result;
     }
 
+    int LengthBetweenPointsByRoad(shared_ptr<Stop> left, shared_ptr<Stop> right) {
+        int result = 0;
+        if (left->point == right->point) {
+            return 0;
+        }
+        auto distance = router_.GetDistance(left->name, right->name);
+        result = distance.has_value() ? distance.value() : 0;
+        return result;
+    }
+
     template <typename It>
-    static double ComputeOneLineLength(It begin, It end) {
-        double length = 0;
+    Distance ComputeOneLineLength(It begin, It end) {
+        Distance distance;
         auto first = begin;
         for (auto it = begin + 1; it != end; ++it) {
-            length += LengthBetweenPoints(*first, *it);
+            distance.by_geo += LengthBetweenPoints(*first, *it);
+            distance.by_road += LengthBetweenPointsByRoad(*first, *it);
             first = it;
         }
-        return length;
+        return distance;
     }
+
 };

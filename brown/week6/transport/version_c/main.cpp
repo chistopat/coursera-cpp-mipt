@@ -14,15 +14,16 @@ using namespace std;
 
 void TestAll() {
     TestRunner test_runner;
-    RUN_TEST(test_runner, Tests::AddBus);
-    RUN_TEST(test_runner, Tests::AddStop);
+//    RUN_TEST(test_runner, Tests::AddBus);
+//    RUN_TEST(test_runner, Tests::AddStop);
+//    RUN_TEST(test_runner, Tests::ParseStopRequest);
     RUN_TEST(test_runner, Tests::Smoke);
-    RUN_TEST(test_runner, Tests::AddBusSameStops);
-    RUN_TEST(test_runner, Tests::LengthBetweenSamePoints);
-//    RUN_TEST(test_runner, Tests::AddStopSpaces);
-    RUN_TEST(test_runner, Tests::CheckStrip);
-    RUN_TEST(test_runner, Tests::FuzzNames);
-    RUN_TEST(test_runner, Tests::TestEmptyBase);
+//    RUN_TEST(test_runner, Tests::AddBusSameStops);
+//    RUN_TEST(test_runner, Tests::LengthBetweenSamePoints);
+////    RUN_TEST(test_runner, Tests::AddStopSpaces);
+//    RUN_TEST(test_runner, Tests::CheckStrip);
+//    RUN_TEST(test_runner, Tests::FuzzNames);
+//    RUN_TEST(test_runner, Tests::TestEmptyBase);
 }
 
 

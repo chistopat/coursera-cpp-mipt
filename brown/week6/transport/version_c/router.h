@@ -1,8 +1,28 @@
-//
-// Created by chistopat on 29.06.2021.
-//
+#pragma once
 
-#ifndef YELLOW_BROWN_WEEK6_TRANSPORT_VERSION_C_ROUTER_H_
-#define YELLOW_BROWN_WEEK6_TRANSPORT_VERSION_C_ROUTER_H_
+#include <unordered_map>
+#include <memory>
 
-#endif // YELLOW_BROWN_WEEK6_TRANSPORT_VERSION_C_ROUTER_H_
+#include "stop.h"
+
+class Router {
+public:
+    Router() = default;
+
+public:
+    void AddDistance(const std::string& from, const std::string& to, int distance) {
+        matrix_[from][to] = distance;
+    }
+
+    std::optional<int> GetDistance(const std::string& from, const std::string& to) const {
+        std::optional<int> result;
+        if (matrix_.count(from)) {
+            if (matrix_.at(from).count(to)) {
+                result = matrix_.at(from).at(to);
+            }
+        }
+        return result;
+    }
+private:
+    std::unordered_map<std::string, std::unordered_map<std::string, int>> matrix_;
+};
