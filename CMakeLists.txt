@@ -83,3 +83,21 @@ add_executable(transport_b
 add_executable(transport_c
         brown/week6/transport/version_c/main.cpp
         brown/week6/transport/version_c/test_runner.h brown/week6/transport/version_c/parse.h brown/week6/transport/version_c/point.h brown/week6/transport/version_c/stop.h brown/week6/transport/version_c/bus_route.h brown/week6/transport/version_c/transport_manager.h brown/week6/transport/version_c/request.h brown/week6/transport/version_c/response.h brown/week6/transport/version_c/utils.h brown/week6/transport/version_c/tests.h brown/week6/transport/version_c/segment.h brown/week6/transport/version_c/router.h brown/week6/transport/version_c/distance_map.h)
+
+
+add_executable(transport_d
+        brown/week6/transport/version_d/main.cpp
+        brown/week6/transport/version_d/test_runner.h
+        brown/week6/transport/version_d/parse.h
+        brown/week6/transport/version_d/point.h
+        brown/week6/transport/version_d/stop.h
+        brown/week6/transport/version_d/bus_route.h
+        brown/week6/transport/version_d/transport_manager.h
+        brown/week6/transport/version_d/request.h
+        brown/week6/transport/version_d/response.h
+        brown/week6/transport/version_d/utils.h
+        brown/week6/transport/version_d/tests.h
+        brown/week6/transport/version_d/segment.h
+        brown/week6/transport/version_d/router.h
+        brown/week6/transport/version_d/distance_map.h
+        brown/week6/transport/version_d/json.h brown/week6/transport/version_d/debug.h)
