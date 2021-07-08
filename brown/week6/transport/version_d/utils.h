@@ -3,8 +3,11 @@
 #include <variant>
 #include "json.h"
 
-using namespace nlohmann;
 using namespace std;
+
+static constexpr auto kBaseRequests = "base_requests";
+static constexpr auto kStatRequests = "stat_requests";
+static constexpr auto kRequestType = "type";
 
 
 bool AreDoubleSame(double left, double right)
@@ -30,7 +33,7 @@ optional<Request::Type> ConvertRequestTypeFromString(string_view type_str, DataB
     }
 }
 
-RequestHolder ParseRequest(const json& request_json, Request::Type request_type) {
+RequestHolder ParseRequest(Json::Node& request_json, Request::Type request_type) {
     RequestHolder request = Request::Create(request_type);
     if (request != nullptr) {
         request->FromJson(request_json);
@@ -48,26 +51,26 @@ struct RequestsContainer {
 };
 
 RequestsContainer ReadRequests(istream& in_stream = cin, bool debug = false, string token = "") {
-    const string input{istream_iterator<char>(in_stream), istream_iterator<char>()};
-    if (debug) {
-        if (input.find(token) != string::npos) {
-            throw runtime_error(input);
-        }
-    }
-    const auto data = json::parse(input);
+//    const string input{istream_iterator<char>(in_stream), istream_iterator<char>()};
+//    if (debug) {
+//        if (input.find(token) != string::npos) {
+//            throw runtime_error(input);
+//        }
+//    }
+    const auto data = Json::Load(in_stream);
 
     RequestsContainer result;
 
     std::set<uint64_t> uniq_ids;
 
-    for (const auto& request : data["base_requests"]) {
-        const string request_type_str = request["type"];
+    for (auto request : data.GetRoot().AsMap().at(kBaseRequests).AsArray()) {
+        const string request_type_str = request.AsMap().at(kRequestType).AsString();
         const auto request_type = ConvertRequestTypeFromString(request_type_str, DataBaseMode::WRITE);
         result.base_requests[static_cast<size_t>(*request_type)].push_back(ParseRequest(request, *request_type));
     }
 
-    for (const auto& request : data["stat_requests"]) {
-        const string request_type_str = request["type"];
+    for (auto request : data.GetRoot().AsMap().at(kStatRequests).AsArray()) {
+        const string request_type_str =  request.AsMap().at(kRequestType).AsString();
         const auto request_type = ConvertRequestTypeFromString(request_type_str, DataBaseMode::READ);
         result.stat_requests.push_back(ParseRequest(request, *request_type));
     }
@@ -112,13 +115,14 @@ void ProcessWriteRequests(const variant<RequestList, RequestGrid>& requests,
 }
 
 void PrintResponses(const vector<ResponseHolder>& responses, ostream& stream = cout) {
-    json response_json;
+    bool first = true;
+    stream << "[";
     for (const auto& response : responses) {
-        response_json.push_back(response->json_data);
+        if (!first) {
+            stream << ", ";
+        }
+        first = false;
+        stream << response->ToString();
     }
-    stream << response_json.dump() << endl;
-}
-
-json ReadJsonInput(istream& in_stream = cin) {
-    return json::parse(istream_iterator<char>(in_stream), istream_iterator<char>());
+    stream << "]" << endl;
 }

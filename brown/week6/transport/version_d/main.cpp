@@ -15,14 +15,13 @@ using namespace std;
 
 void TestAll() {
     TestRunner test_runner;
-    RUN_TEST(test_runner, Tests::Test3);
-
+   RUN_TEST(test_runner, Tests::Test3);
+    RUN_TEST(test_runner, Tests::JsonSmoke);
 }
 
 
 int main() {
 //    TestAll();
-    cout.precision(6);
     TransportManager manager;
     ostringstream log;
     const auto requests = ReadRequests(cin, DEBUG, TOKEN);

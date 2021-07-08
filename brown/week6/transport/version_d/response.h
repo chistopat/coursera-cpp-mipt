@@ -1,10 +1,19 @@
 #pragma once
 
 #include "json.h"
-using namespace nlohmann;
 using namespace std;
 class BaseResponse;
 using ResponseHolder = unique_ptr<BaseResponse>;
+
+static constexpr auto kErrorMessage = "error_message";
+static constexpr auto kRequestId = "request_id";
+
+static constexpr auto kCurvature = "curvature";
+static constexpr auto kRoadLength = "route_length";
+static constexpr auto kStopCount = "stop_count";
+static constexpr auto kUniqueStopCount = "unique_stop_count";
+static constexpr auto kBuses = "buses";
+
 
 class BaseResponse {
 public:
@@ -12,17 +21,16 @@ public:
         GET_BUS,
         GET_STOP,
         ERROR,
-        LAST_,
     };
 public:
     static ResponseHolder Create(BaseResponse::Type type);
     BaseResponse(BaseResponse::Type type) : type(type) {}
     virtual std::string ToString() = 0;
-    virtual void FromJson(uint64_t request_id, string msg, json&& data) = 0;
+    virtual void FromJson(int request_id, string msg, map<string, Json::Node>&& data= {}) = 0;
     virtual ~BaseResponse() = default;
 
     BaseResponse::Type type;
-    json json_data;
+    map<string, Json::Node> json_data;
 };
 
 
@@ -31,11 +39,18 @@ public:
     using BaseResponse::BaseResponse;
     ErrorResponse() : BaseResponse(BaseResponse::Type::ERROR) {}
     std::string ToString() override{
-        return json_data.dump();
+        ostringstream os;
+
+        os << "{"
+        << "\"" << kErrorMessage << "\": "
+        << "\"" << json_data.at(kErrorMessage).AsString() << "\", "
+        << "\"" << kRequestId << "\": "
+           << json_data.at(kRequestId).AsInt() << "}";
+        return os.str();
     }
-    void FromJson(uint64_t request_id, string msg, json&& data) override{
-        json_data["request_id"] = request_id;
-        json_data["error_message"] = move(msg);
+    void FromJson(int request_id, string msg, map<string, Json::Node>&& data) override{
+        json_data[kRequestId] = Json::Node(request_id);
+        json_data[kErrorMessage] = Json::Node(msg);
     }
 };
 
@@ -45,12 +60,27 @@ public:
     GetStopResponse() : BaseResponse(BaseResponse::Type::GET_STOP) {}
 
     std::string ToString() override{
-        return json_data.dump();
+        ostringstream os;
+        const auto buses = json_data.at(kBuses).AsArray();
+        os << "{"
+           << "\"" << kBuses << "\": " << "[";
+        bool first = true;
+        for (const auto& bus : buses) {
+            if (!first) {
+                os << ", ";
+            }
+            first = false;
+            os << "\"" << bus.AsString() << "\"";
+        }
+        os << "], " << "\"" << kRequestId << "\": "
+           <<  json_data.at(kRequestId).AsInt() << "}";
+
+        return os.str();
     }
 
-    void FromJson(uint64_t request_id, string msg, json&& data) override {
+    void FromJson(int request_id, string msg, map<string, Json::Node>&& data) override {
         json_data = move(data);
-        json_data["request_id"] = request_id;
+        json_data[kRequestId] = Json::Node(request_id);
     }
 };
 
@@ -62,12 +92,26 @@ public:
     GetBusResponse() : BaseResponse(BaseResponse::Type::GET_BUS) {}
 
     std::string ToString() override{
-        return json_data.dump();
+        ostringstream os;
+        os << "{"
+           << "\"" << kCurvature << "\": "
+           << json_data.at(kCurvature).AsDouble() << ", "
+           << "\"" << kRequestId << "\": "
+           << json_data.at(kRequestId).AsInt() << ", "
+           << "\"" << kRoadLength << "\": "
+           << json_data.at(kRoadLength).AsInt() << ", "
+           << "\"" << kStopCount << "\": "
+           << json_data.at(kStopCount).AsInt() << ", "
+           << "\"" << kUniqueStopCount << "\": "
+           << json_data.at(kUniqueStopCount).AsInt() << "}";
+
+        return os.str();
+
     }
 
-    void FromJson(uint64_t request_id, string msg, json&& data) override {
+    void FromJson(int request_id, string msg, map<string, Json::Node>&& data) override {
         json_data = move(data);
-        json_data["request_id"] = request_id;
+        json_data[kRequestId] = Json::Node(request_id);
     }
 };
 

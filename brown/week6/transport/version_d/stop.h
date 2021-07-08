@@ -3,8 +3,6 @@
 #include <memory>
 #include "json.h"
 using namespace std;
-using namespace nlohmann;
-
 
 class Stop {
 public:
@@ -20,11 +18,14 @@ public:
 
     }
 
-    json ToJson() const {
-        json data;
-        data["buses"] = buses;
-        return data;
+    map<string, Json::Node> ToJson() const {
+        auto result = map<string, Json::Node>{};
+        auto jbuses = vector<Json::Node>{};
+        jbuses.insert(jbuses.end(), buses.begin(), buses.end());
+        result["buses"] = jbuses;
+        return result;
     }
+
     string ToString() const {
         ostringstream os;
         if (buses.empty()) {

@@ -8,10 +8,17 @@
 
 #include <algorithm>
 using namespace std;
-using namespace nlohmann;
 
 struct Request;
 using RequestHolder = unique_ptr<Request>;
+
+static constexpr auto kName = "name";
+static constexpr auto kLatitude = "latitude";
+static constexpr auto kLongitude = "longitude";
+static constexpr auto kRoadDistances = "road_distances";
+static constexpr auto kIsRoundtrip = "is_roundtrip";
+static constexpr auto kStops = "stops";
+static constexpr auto kId = "id";
 
 struct Request {
 
@@ -26,7 +33,7 @@ struct Request {
     Request(Type type) : type(type) {}
     static RequestHolder Create(Type type);
     virtual void ParseFrom(string_view input) = 0;
-    virtual void FromJson(json data) = 0;
+    virtual void FromJson(Json::Node& data) = 0;
     virtual ~Request() = default;
 
     const Type type;
@@ -75,11 +82,11 @@ struct AddStopRequest : public ModifyRequest {
         distance_map = DistanceMap::FromString(input);
     }
 
-    void FromJson(json data) override {
-        name = data["name"];
-        latitude = data["latitude"];
-        longitude = data["longitude"];
-        distance_map = DistanceMap(data["road_distances"]);
+    void FromJson(Json::Node& data) override {
+        name = data.AsMap().at(kName).AsString();
+        latitude = data.AsMap().at(kLatitude).AsDouble();
+        longitude = data.AsMap().at(kLongitude).AsDouble();
+        distance_map = DistanceMap(data.AsMap().at(kRoadDistances).AsMap());
     }
 
     void Process(TransportManager& manager) const override {
@@ -108,10 +115,12 @@ struct AddBusRequest : public ModifyRequest {
         stop_list.insert(stop_list.end(), stop_view.begin(), stop_view.end());
     }
 
-    void FromJson(json data) override {
-        name = data["name"];
-        is_roundtrip = data["is_roundtrip"];
-        stop_list.insert(stop_list.end(), data["stops"].begin(), data["stops"].end());
+    void FromJson(Json::Node& data) override {
+        name = data.AsMap().at(kName).AsString();
+        is_roundtrip = data.AsMap().at(kIsRoundtrip).AsBool();
+        for (const auto& stop : data.AsMap().at(kStops).AsArray()) {
+            stop_list.push_back(stop.AsString());
+        }
     }
 
     void Process(TransportManager& manager) const override {
@@ -130,9 +139,9 @@ struct GetBusRequest : public ReadRequest<ResponseHolder> {
     }
 
 
-    void FromJson(json data) override {
-        name = data["name"];
-        id = data["id"];
+    void FromJson(Json::Node& data) override {
+        name = data.AsMap().at(kName).AsString();
+        id = data.AsMap().at(kId).AsInt();
     }
     ResponseHolder Process(const TransportManager& manager) const override {
         const auto bus_route = manager.GetBus(name);
@@ -142,12 +151,12 @@ struct GetBusRequest : public ReadRequest<ResponseHolder> {
             return response;
         } else {
             auto response = BaseResponse::Create(BaseResponse::Type::ERROR);
-            response->FromJson(id, "not found", nullptr);
+            response->FromJson(id, "not found");
             return response;
         }
     }
     string name;
-    uint64_t id;
+    unsigned id;
 };
 
 struct GetStopRequest : public ReadRequest<ResponseHolder> {
@@ -156,9 +165,9 @@ struct GetStopRequest : public ReadRequest<ResponseHolder> {
         name = Strip(input);
     }
 
-    void FromJson(json data) override {
-        name = data["name"];
-        id = data["id"];
+    void FromJson(Json::Node& data) override {
+        name = data.AsMap().at(kName).AsString();
+        id = data.AsMap().at(kId).AsInt();
     }
 
     ResponseHolder Process(const TransportManager& manager) const override {
@@ -169,7 +178,7 @@ struct GetStopRequest : public ReadRequest<ResponseHolder> {
             return response;
         } else {
             auto response = BaseResponse::Create(BaseResponse::Type::ERROR);
-            response->FromJson(id, "not found", nullptr);
+            response->FromJson(id, "not found");
             return response;
         }
     }

@@ -100,7 +100,7 @@ add_executable(transport_d
         brown/week6/transport/version_d/segment.h
         brown/week6/transport/version_d/router.h
         brown/week6/transport/version_d/distance_map.h
-        brown/week6/transport/version_d/json.h brown/week6/transport/version_d/debug.h)
+        brown/week6/transport/version_d/json.h brown/week6/transport/version_d/debug.h brown/week6/transport/version_d/json.cpp)
 
 
 add_executable(transport_d1

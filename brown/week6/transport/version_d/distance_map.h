@@ -25,6 +25,12 @@ public:
 
     DistanceMap(std::unordered_map<std::string, int> distance_map) : values(std::move(distance_map)) {
     }
+    DistanceMap(std::map<std::string, Json::Node> distance_map) {
+        values.reserve(distance_map.size());
+        for (const auto& item : distance_map) {
+            values.insert({item.first, item.second.AsInt()});
+        }
+    }
 
     DistanceMap() = default;
 

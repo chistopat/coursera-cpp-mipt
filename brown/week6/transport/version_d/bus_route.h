@@ -5,9 +5,8 @@
 
 #include "router.h"
 #include "json.h"
-
+#include "response.h"
 using namespace std;
-using namespace nlohmann;
 
 struct Distance {
     int by_road = 0;
@@ -52,20 +51,19 @@ public:
         return os.str();
     }
 
-    json ToJson() const {
-        json data;
-
-        data["curvature"] = distance_.by_road / distance_.by_geo;
-        data["route_length"] = distance_.by_road;
-        data["stop_count"] = total_stops_count;
-        data["unique_stop_count"] = unique_stops_count;
+    map<string, Json::Node> ToJson() const {
+        auto data = map<string, Json::Node>{};
+        data[kCurvature] = distance_.by_road / distance_.by_geo;
+        data[kRoadLength] = distance_.by_road;
+        data[kStopCount] = total_stops_count;
+        data[kUniqueStopCount] = unique_stops_count;
         return data;
     }
 
     bool is_roundtrip;
     string name;
-    size_t total_stops_count;
-    size_t unique_stops_count;
+    int total_stops_count;
+    int unique_stops_count;
     vector<shared_ptr<Stop>> route;
     Distance distance_;
 
@@ -76,9 +74,9 @@ private:
 private:
     void SetTotalStopsCount() {
         if (is_roundtrip) {
-            total_stops_count = route.size();
+            total_stops_count = static_cast<int>(route.size());
         } else {
-            total_stops_count = (route.size() * 2) - 1;
+            total_stops_count = static_cast<int>((route.size() * 2) - 1);
         }
     }
 
@@ -87,7 +85,7 @@ private:
         for (const auto& stop : route) {
             uniq_names.insert(stop->name);
         }
-        unique_stops_count = uniq_names.size();
+        unique_stops_count = static_cast<int>(uniq_names.size());
     }
 
     void ComputeRouteLength() {
